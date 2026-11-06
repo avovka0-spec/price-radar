@@ -391,7 +391,12 @@ export default function Page() {
               {p.image ? <img src={p.image} alt="" onError={(e) => ((e.target as HTMLImageElement).style.visibility = "hidden")} /> : <div style={{ width: 56 }} />}
               <div className="pinfo">
                 <div className="pname">{p.name}</div>
-                <div className="pbrand">{p.brand}{s?.days ? ` · ${s.days} дн. наблюдений` : ""}{p.marketplace === "ozon" ? " · Ozon" : ""}</div>
+                <div className="pbrand">
+                  {p.marketplace === "wb" && <span className="mpbadge wb">WB</span>}
+                  {p.marketplace === "ozon" && <span className="mpbadge ozon">Ozon</span>}
+                  {p.marketplace === "ali" && <span className="mpbadge ali">Ali</span>}
+                  {p.brand}{s?.days ? ` · ${s.days} дн. наблюдений` : ""}
+                </div>
                 <div className="prow">
                   {p.currentPrice ? <span className="pprice">{fmt(p.currentPrice)}</span> : <span className="pprice" style={{ color: "var(--text2)" }}>— ₽</span>}
                   {delta !== null && Math.abs(delta) >= 0.5 && (
@@ -424,7 +429,12 @@ export default function Page() {
             <div className="grab" />
             <div className="inner">
               <div className="sheettitle">
-                <span className="t">{dProduct.brand && <b>{dProduct.brand} · </b>}{dProduct.name}</span>
+                <span className="t">
+                  {dProduct.marketplace === "wb" && <span className="mpbadge wb" style={{ marginRight: 6, verticalAlign: "middle" }}>WB</span>}
+                  {dProduct.marketplace === "ozon" && <span className="mpbadge ozon" style={{ marginRight: 6, verticalAlign: "middle" }}>Ozon</span>}
+                  {dProduct.marketplace === "ali" && <span className="mpbadge ali" style={{ marginRight: 6, verticalAlign: "middle" }}>Ali</span>}
+                  {dProduct.brand && <b>{dProduct.brand} · </b>}{dProduct.name}
+                </span>
                 <button className="ghost small" onClick={() => setDetail(null)}>Готово</button>
               </div>
               {dProduct.currentPrice && <div style={{ fontSize: 32, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{fmt(dProduct.currentPrice)}</div>}

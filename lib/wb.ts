@@ -30,13 +30,28 @@ export function parseOzonLink(url: string): { sku: string; url: string; name: st
   return null;
 }
 
-export type ParsedProduct = { sku: string; url: string; name: string; marketplace: "wb" | "ozon" };
+export type ParsedProduct = { sku: string; url: string; name: string; marketplace: "wb" | "ozon" | "ali" };
+
+export function parseAliExpressLink(url: string): { sku: string; url: string; name: string; marketplace: "ali" } | null {
+  const s = url.trim();
+  // https://www.aliexpress.com/item/1005001234567890.html  /  https://aliexpress.ru/item/...
+  const m = s.match(/aliexpress\.(?:com|ru)\/item\/(\d+)/i);
+  if (m) {
+    return { sku: `ali:${m[1]}`, url: s.split("?")[0], name: "Товар AliExpress", marketplace: "ali" };
+  }
+  // короткая ссылка a.aliexpress.com/...
+  const t = s.match(/a\.aliexpress\.com\/_([A-Za-z0-9]+)/i);
+  if (t) return { sku: `ali:short:${t[1]}`, url: s, name: "Товар AliExpress", marketplace: "ali" };
+  return null;
+}
 
 export function parseProductLink(url: string): ParsedProduct | null {
   const wb = parseWbLink(url);
   if (wb) return { sku: wb.sku, url: wb.url, name: "", marketplace: "wb" };
   const oz = parseOzonLink(url);
   if (oz) return oz;
+  const al = parseAliExpressLink(url);
+  if (al) return al;
   return null;
 }
 
