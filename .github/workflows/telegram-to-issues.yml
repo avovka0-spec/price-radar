@@ -1,0 +1,33 @@
+name: telegram-to-issues
+on:
+  schedule:
+    - cron: "*/5 * * * *" # каждые 5 минут
+  workflow_dispatch: {}
+permissions:
+  contents: write
+  issues: write
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Опрос Telegram и создание Issue
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_OWNER: avovka0-spec
+          GH_REPO: price-radar
+        run: node scripts/telegram-to-issues.mjs
+      - name: Коммит offset
+        run: |
+          git config user.name "tg-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add public/data/telegram-offset.json
+          if git diff --cached --quiet; then echo "no offset changes"; else
+            git commit -m "data: telegram offset"
+            git push
+          fi
