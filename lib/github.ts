@@ -27,7 +27,11 @@ async function ghJson<T>(cfg: GhConfig, path: string, init?: RequestInit): Promi
 export async function readRepoJson<T>(cfg: GhConfig, path: string): Promise<T | null> {
   try {
     const j = await ghJson<any>(cfg, path);
-    return JSON.parse(atob(j.content)) as T;
+    // atob возвращает binary string (1 байт = 1 char); UTF-8 нужно декодировать через TextDecoder,
+    // иначе русский текст превращается в «Ð½Ð°Ð·Ð²Ð°Ð½Ð¸Ðµ».
+    const bytes = Uint8Array.from(atob(j.content.replace(/\s/g, "")), (c) => c.charCodeAt(0));
+    const text = new TextDecoder("utf-8").decode(bytes);
+    return JSON.parse(text) as T;
   } catch (e: any) {
     if (e?.message?.includes("404")) return null;
     throw e;

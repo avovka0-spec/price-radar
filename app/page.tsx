@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Chart, { fmt } from "@/components/Chart";
 import { parseWbLink, wbImageUrl, fetchWbCard } from "@/lib/wb";
 import type { Product, History, PushSub, AppConfig } from "@/lib/types";
@@ -57,6 +57,58 @@ export default function Page() {
   const [showOnboard, setShowOnboard] = useState(false);
   const [demo, setDemo] = useState(false);
   const [isIos, setIsIos] = useState(false);
+  // --- pull-to-refresh ---
+  const [pullY, setPullY] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const pullStartRef = useRef(0);
+  const pullingRef = useRef(false);
+  const pullYRef = useRef(0);
+  useEffect(() => {
+    const onStart = (e: TouchEvent) => {
+      if (window.scrollY <= 2 && e.touches.length === 1) {
+        pullStartRef.current = e.touches[0].clientY;
+        pullingRef.current = true;
+      }
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!pullingRef.current) return;
+      const dy = e.touches[0].clientY - pullStartRef.current;
+      if (dy > 0 && window.scrollY <= 2) {
+        const v = Math.min(dy * 0.5, 90);
+        pullYRef.current = v;
+        setPullY(v);
+        if (dy > 8) e.preventDefault();
+      } else {
+        pullingRef.current = false;
+        pullYRef.current = 0;
+        setPullY(0);
+      }
+    };
+    const onEnd = async () => {
+      if (!pullingRef.current) return;
+      const v = pullYRef.current;
+      pullingRef.current = false;
+      if (v > 50) {
+        setRefreshing(true);
+        if (demo) { const d = demoData(); setProducts(d.products); setHistory(d.history); }
+        else if (cfg) await loadRepo(cfg, true);
+        setRefreshing(false);
+      }
+      pullYRef.current = 0;
+      setPullY(0);
+    };
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchmove", onMove, { passive: false });
+    window.addEventListener("touchend", onEnd, { passive: true });
+    window.addEventListener("touchcancel", onEnd, { passive: true });
+    return () => {
+      window.removeEventListener("touchstart", onStart);
+      window.removeEventListener("touchmove", onMove);
+      window.removeEventListener("touchend", onEnd);
+      window.removeEventListener("touchcancel", onEnd);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cfg, demo]);
 
   const show = useCallback((m: string) => {
     setToast(m);
@@ -236,6 +288,23 @@ export default function Page() {
 
   return (
     <main className="wrap">
+      {(pullY > 0 || refreshing) && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, zIndex: 60,
+          display: "flex", justifyContent: "center", alignItems: "center",
+          height: 56, transform: `translateY(${Math.max(-20, pullY - 56)}px)`,
+          transition: refreshing ? "transform .2s" : "none", pointerEvents: "none",
+        }}>
+          <div style={{
+            width: 34, height: 34, borderRadius: 17,
+            background: "var(--card)", boxShadow: "0 2px 8px rgba(0,0,0,.12)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            transform: `rotate(${pullY * 3}deg)`,
+          }}>
+            {refreshing ? "⟳" : "↓"}
+          </div>
+        </div>
+      )}
       <h1 className="h1"><span className="dot" />ЦенРадар</h1>
       <p className="sub">Wildberries · история до 180 дней · push при изменении</p>
 
