@@ -7,7 +7,7 @@ on:
         required: true
         type: string
       text:
-        description: "Текст сообщения"
+        description: "Текст сообщения (UTF-8)"
         required: true
         type: string
 permissions:
@@ -16,12 +16,33 @@ jobs:
   send:
     runs-on: ubuntu-latest
     steps:
-      - name: Отправка сообщения в Telegram
+      - name: Отправка сообщения в Telegram (UTF-8 через Node)
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           CHAT_ID: ${{ inputs.chat_id }}
           TEXT: ${{ inputs.text }}
         run: |
-          curl -sS -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
-            -H "Content-Type: application/json" \
-            -d "$(node -e "console.log(JSON.stringify({chat_id: process.env.CHAT_ID, text: process.env.TEXT, disable_web_page_preview: true}))")"
+          node << 'NODE_EOF'
+          const https = require("https");
+          const payload = JSON.stringify({
+            chat_id: process.env.CHAT_ID,
+            text: process.env.TEXT,
+            disable_web_page_preview: true,
+          });
+          const req = https.request({
+            hostname: "api.telegram.org",
+            path: "/bot" + process.env.BOT_TOKEN + "/sendMessage",
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json; charset=utf-8",
+              "Content-Length": Buffer.byteLength(payload, "utf8"),
+            },
+          }, (res) => {
+            let buf = "";
+            res.on("data", (c) => (buf += c));
+            res.on("end", () => { console.log(res.statusCode, buf); process.exit(res.statusCode === 200 ? 0 : 1); });
+          });
+          req.on("error", (e) => { console.error(e); process.exit(1); });
+          req.write(payload, "utf8");
+          req.end();
+          NODE_EOF
