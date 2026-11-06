@@ -9,5 +9,16 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1793976597342
+  },
+  {
+    "id": "80a60dc8-f99e-43ca-a038-b56f54f57d42",
+    "sku": "1545780372",
+    "url": "https://www.wildberries.ru/catalog/1545780372/detail.aspx",
+    "name": "— название придёт после следующей проверки",
+    "brand": "",
+    "image": "https://basket-16.wbbasket.ru/vol15457/part1545780/1545780372/images/c246x328/1.webp",
+    "thresholdPct": 10,
+    "notify": true,
+    "addedAt": 1793976649791
   }
 ]
