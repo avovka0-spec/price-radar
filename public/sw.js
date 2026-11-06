@@ -5,7 +5,7 @@ self.addEventListener("install", (e) => self.skipWaiting());
 self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 
 self.addEventListener("push", (event) => {
-  let data = { title: "ЦенРадар", body: "Изменение цены", url: "/" };
+  let data = { title: "ЦенРадар", body: "Изменение цены", url: "./" };
   try {
     if (event.data) data = { ...data, ...event.data.json() };
   } catch {}
@@ -19,11 +19,10 @@ self.addEventListener("push", (event) => {
     self.registration.showNotification(data.title, {
       body: data.body,
       data: data.url,
-      icon: "/icons/icon-192.png",
-      badge: "/icons/badge-96.png",
+      icon: "icons/icon-192.png",
+      badge: "icons/badge-96.png",
     })
   );
-  // Обновляем бейдж иконки (лучшее усилие; iOS может игнорировать)
   if (self.navigator.setAppBadge) self.navigator.setAppBadge(1);
 });
 
@@ -33,7 +32,7 @@ self.addEventListener("notificationclick", (event) => {
     (async () => {
       if (self.navigator.clearAppBadge) self.navigator.clearAppBadge();
       const cs = await self.clients.matchAll({ type: "window", includeUncontrolled: true });
-      const target = new URL((event.notification.data || "/"), APP_URL).href;
+      const target = new URL(event.notification.data || "./", APP_URL).href;
       for (const c of cs) {
         if (c.url === target) return c.focus();
       }

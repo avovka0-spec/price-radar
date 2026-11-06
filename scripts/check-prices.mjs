@@ -40,7 +40,7 @@ async function sendPush(notes, removedSubs) {
   const payload = JSON.stringify({
     title: "ЦенРадар",
     body: notes.join("\n"),
-    url: "/",
+    url: "./",
   });
   for (const s of subs) {
     try {

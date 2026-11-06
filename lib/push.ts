@@ -10,9 +10,11 @@ export function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   return arr;
 }
 
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH || "";
+
 export async function registerPush(vapidPublicKey: string): Promise<PushSubscription> {
   if (!("serviceWorker" in navigator)) throw new Error("Service Worker не поддерживается");
-  const reg = await navigator.serviceWorker.register("/sw.js");
+  const reg = await navigator.serviceWorker.register(`${basePath}/sw.js`);
   const perm = await Notification.requestPermission();
   if (perm !== "granted") throw new Error("Разрешение на уведомления не выдано");
   const sub = await reg.pushManager.subscribe({
