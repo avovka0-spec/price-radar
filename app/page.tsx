@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Chart, { fmt } from "@/components/Chart";
-import { parseWbLink, wbImageUrl, fetchWbCard } from "@/lib/wb";
+import { parseProductLink, wbImageUrl, fetchWbCard } from "@/lib/wb";
 import type { Product, History, PushSub, AppConfig } from "@/lib/types";
 import { GhConfig, readRepoJson, writeRepoJson } from "@/lib/github";
 import { registerPush, subToJson } from "@/lib/push";
@@ -119,19 +119,31 @@ export default function Page() {
   useEffect(() => {
     setIsIos(/iP(hone|ad|od)/.test(navigator.userAgent) || /Macintosh.*Mobile Safari/.test(navigator.userAgent));
     const isDemo = new URLSearchParams(window.location.search).has("demo");
+    const handleShared = () => {
+      const sp = new URLSearchParams(window.location.search);
+      const sharedUrl = sp.get("url") || sp.get("text") || "";
+      const sharedTitle = sp.get("title") || "";
+      if (!sharedUrl) return;
+      window.history.replaceState({}, "", window.location.pathname);
+      if (sharedTitle) show(`Поделено: ${sharedTitle.slice(0, 60)}`);
+      setTimeout(() => { addProduct(sharedUrl); }, 400);
+    };
+
     (async () => {
       if (isDemo) {
         setDemo(true);
         const d = demoData();
         setProducts(d.products);
         setHistory(d.history);
+        handleShared();
         return;
       }
       const raw = localStorage.getItem(LS);
-      if (!raw) return setShowOnboard(true);
+      if (!raw) { setShowOnboard(true); handleShared(); return; }
       const c: LocalCfg = JSON.parse(raw);
       setCfg(c);
       await loadRepo(c, false);
+      handleShared();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -162,22 +174,39 @@ export default function Page() {
   };
 
   // --- добавление товара ---
-  const addProduct = async () => {
+  const addProduct = async (overrideUrl?: string) => {
     setAddErr("");
-    if (!cfg) return setShowOnboard(true);
-    const parsed = parseWbLink(link);
-    if (!parsed) return setAddErr("Не похоже на ссылку Wildberries (нужен номер артикула, напр. wildberries.ru/catalog/12345/detail.aspx)");
-    if (products.some((p) => p.sku === parsed.sku)) { setLink(""); return show("Товар уже отслеживается"); }
+    if (!cfg && !demo) return setShowOnboard(true);
+    const input = (overrideUrl ?? link).trim();
+    const parsed = parseProductLink(input);
+    if (!parsed) return setAddErr("Не похоже на ссылку Ozon/Wildberries или артикул");
+    if (products.some((p) => p.sku === parsed.sku)) {
+      if (!overrideUrl) setLink("");
+      return show("Товар уже отслеживается");
+    }
 
-    let card = await fetchWbCard(parsed.sku);
+    let name = parsed.name;
+    let brand = "";
+    let currentPrice: number | undefined;
+    let image: string | undefined;
+    if (parsed.marketplace === "wb") {
+      const card = await fetchWbCard(parsed.sku);
+      if (card) { name = card.name || name; brand = card.brand || brand; currentPrice = card.price; }
+      image = wbImageUrl(parsed.sku);
+    } else {
+      // Ozon: имя из slug URL; цену подтянем вручную/Actions'ом (антибот не пускает с CI)
+      if (!name) name = "Товар Ozon";
+    }
+
     const created: Product = {
       id: crypto.randomUUID(),
       sku: parsed.sku,
       url: parsed.url,
-      name: card?.name || "— название придёт после следующей проверки",
-      brand: card?.brand || "",
-      image: wbImageUrl(parsed.sku),
-      currentPrice: card?.price,
+      name: name || "— название придёт после следующей проверки",
+      brand,
+      marketplace: parsed.marketplace,
+      image,
+      currentPrice,
       targetPrice: undefined,
       thresholdPct: 10,
       notify: true,
@@ -185,13 +214,15 @@ export default function Page() {
     };
     const next = [...products, created];
     setProducts(next);
-    setLink("");
+    if (!overrideUrl) setLink("");
     try {
-      const his = { ...history, [parsed.sku]: card?.price ? [...(history[parsed.sku] ?? []), { t: Date.now(), p: card.price }] : (history[parsed.sku] ?? []) };
+      const his = { ...history, [parsed.sku]: currentPrice ? [...(history[parsed.sku] ?? []), { t: Date.now(), p: currentPrice }] : (history[parsed.sku] ?? []) };
       setHistory(his);
-      await writeRepoJson(cfg, "public/data/products.json", next, `Добавлен артикул ${parsed.sku}`);
-      await writeRepoJson(cfg, "public/data/history.json", his, `История: ${parsed.sku}`);
-      show("Добавлено. Цена появится в графике после первой проверки Actions");
+      if (cfg) {
+        await writeRepoJson(cfg, "public/data/products.json", next, `Добавлен ${parsed.marketplace.toUpperCase()} ${parsed.sku}`);
+        await writeRepoJson(cfg, "public/data/history.json", his, `История: ${parsed.sku}`);
+      }
+      show(parsed.marketplace === "wb" && currentPrice ? "Добавлено, цена получена" : "Добавлено. Цену уточним при следующей проверке (или введите вручную)");
     } catch (e: any) {
       setAddErr(`Не удалось закоммитить в репо: ${e?.message}. Проверьте токен/ветку в настройках.`);
     }
@@ -247,8 +278,12 @@ export default function Page() {
   };
 
   const dProduct = useMemo(() => products.find((p) => p.sku === detail) ?? null, [products, detail]);
+  const [confirmDeleteSku, setConfirmDeleteSku] = useState<string | null>(null);
+  const [armedDelete, setArmedDelete] = useState(false);
   const [manualVal, setManualVal] = useState("");
-  useEffect(() => setManualVal(""), [detail]); // сброс при открытии новой карточки
+  useEffect(() => { setArmedDelete(false); setManualVal(""); }, [detail]);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
   const addManualPoint = async () => {
     if (!dProduct) return;
     const price = Number(manualVal.replace(",", "."));
@@ -317,9 +352,9 @@ export default function Page() {
       {cfgLoadErr && <div className="err">{cfgLoadErr}</div>}
 
       <div className="addrow">
-        <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="Ссылка на товар WB или артикул"
+        <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="Ссылка Ozon/WB или артикул"
           inputMode="url" autoCapitalize="none" autoCorrect="off" onKeyDown={(e) => e.key === "Enter" && addProduct()} />
-        <button onClick={addProduct}>＋</button>
+        <button onClick={() => addProduct()}>＋</button>
       </div>
       {addErr && <div className="err">{addErr}</div>}
 
@@ -333,13 +368,30 @@ export default function Page() {
         const prev = autos.length > 1 ? autos[autos.length - 2].p : p.currentPrice;
         const delta = p.currentPrice && prev ? ((p.currentPrice - prev) / prev) * 100 : null;
         const s = stats(p.sku);
+
+        if (confirmDeleteSku === p.sku) {
+          return (
+            <div className="card" key={p.sku} style={{ padding: 12, display: "flex", gap: 8, alignItems: "center" }}>
+              <span style={{ flex: 1, fontSize: 14 }}>Удалить «{p.name.slice(0, 40)}»?</span>
+              <button className="danger" style={{ width: "auto", padding: "8px 12px" }} onClick={() => { remove(p.sku); setConfirmDeleteSku(null); }}>Удалить</button>
+              <button className="ghost small" onClick={() => setConfirmDeleteSku(null)}>Отмена</button>
+            </div>
+          );
+        }
+
         return (
-          <div className="card" key={p.sku}>
+          <div className="card" key={p.sku}
+            onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; touchStartY.current = e.touches[0].clientY; }}
+            onTouchEnd={(e) => {
+              const dx = e.changedTouches[0].clientX - touchStartX.current;
+              const dy = e.changedTouches[0].clientY - touchStartY.current;
+              if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) setConfirmDeleteSku(p.sku);
+            }}>
             <div className="pcard" onClick={() => setDetail(p.sku)}>
               {p.image ? <img src={p.image} alt="" onError={(e) => ((e.target as HTMLImageElement).style.visibility = "hidden")} /> : <div style={{ width: 56 }} />}
               <div className="pinfo">
                 <div className="pname">{p.name}</div>
-                <div className="pbrand">{p.brand}{s?.days ? ` · ${s.days} дн. наблюдений` : ""}</div>
+                <div className="pbrand">{p.brand}{s?.days ? ` · ${s.days} дн. наблюдений` : ""}{p.marketplace === "ozon" ? " · Ozon" : ""}</div>
                 <div className="prow">
                   {p.currentPrice ? <span className="pprice">{fmt(p.currentPrice)}</span> : <span className="pprice" style={{ color: "var(--text2)" }}>— ₽</span>}
                   {delta !== null && Math.abs(delta) >= 0.5 && (
@@ -408,7 +460,13 @@ export default function Page() {
                 {dProduct.notify ? "🔕 Отключить уведомления" : "🔔 Включить уведомления"}
               </button>
               <a className="linkrow" href={dProduct.url} target="_blank" rel="noreferrer">Открыть на Wildberries ↗</a>
-              <button className="danger" onClick={() => confirm(`Удалить «${dProduct.brand || dProduct.name}» из отслеживания?`) && remove(dProduct.sku)}>Удалить из отслеживания</button>
+              <button className="danger" onClick={() => {
+                if (!armedDelete) { setArmedDelete(true); return; }
+                remove(dProduct.sku); setArmedDelete(false);
+              }}>
+                {armedDelete ? "⚠️ Нажмите ещё раз — удалить окончательно" : "Удалить из отслеживания"}
+              </button>
+              {armedDelete && <button className="ghost small" style={{ width: "100%" }} onClick={() => setArmedDelete(false)}>Отмена</button>}
             </div>
           </div>
         </>

@@ -2,12 +2,42 @@
 
 export function parseWbLink(url: string): { sku: string; url: string } | null {
   const s = url.trim();
-  // https://www.wildberries.ru/catalog/12345678/detail.aspx
-  // https://wb.ru/catalog/12345678/detail.aspx · ?nm=...
   const m = s.match(/(?:catalog|nm)=(\d{4,})/) || s.match(/^(\d{4,})$/);
   if (!m) return null;
   const sku = m[1];
   return { sku, url: `https://www.wildberries.ru/catalog/${sku}/detail.aspx` };
+}
+
+export function parseOzonLink(url: string): { sku: string; url: string; name: string; marketplace: "ozon" } | null {
+  const s = url.trim();
+  // https://www.ozon.ru/product/slug-name-123456789/  или  https://ozon.ru/product/...
+  const m = s.match(/ozon\.ru\/product\/([^/?#]+)/i);
+  if (m) {
+    const slug = m[1];
+    const idMatch = slug.match(/(\d{6,})$/);
+    const id = idMatch ? idMatch[1] : slug;
+    // имя из slug: убираем хвостовой артикул и дефисы
+    const name = slug
+      .replace(/-\d{6,}$/, "")
+      .replace(/[-_]+/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+    return { sku: `ozon:${id}`, url: `https://www.ozon.ru/product/${slug}/`, name: name || "Товар Ozon", marketplace: "ozon" };
+  }
+  // короткая ссылка ozon.ru/t/abc
+  const t = s.match(/ozon\.ru\/t\/([A-Za-z0-9]+)/i);
+  if (t) return { sku: `ozon:t:${t[1]}`, url: s, name: "Товар Ozon", marketplace: "ozon" };
+  return null;
+}
+
+export type ParsedProduct = { sku: string; url: string; name: string; marketplace: "wb" | "ozon" };
+
+export function parseProductLink(url: string): ParsedProduct | null {
+  const wb = parseWbLink(url);
+  if (wb) return { sku: wb.sku, url: wb.url, name: "", marketplace: "wb" };
+  const oz = parseOzonLink(url);
+  if (oz) return oz;
+  return null;
 }
 
 // basket-бакет для картинки (алгоритм WB, может меняться со временем)

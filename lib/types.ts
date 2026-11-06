@@ -4,6 +4,7 @@ export interface Product {
   url: string;
   name: string;
   brand: string;
+  marketplace?: "wb" | "ozon";
   image?: string;
   currentPrice?: number; // ₽
   lastPrice?: number;
