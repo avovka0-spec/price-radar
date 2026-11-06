@@ -87,9 +87,9 @@ export default function Page() {
   const loadRepo = useCallback(async (c: LocalCfg, announce: boolean) => {
     try {
       const [p, h, k] = await Promise.all([
-        readRepoJson<{ products?: Product[] } | Product[]>(c, "data/products.json"),
-        readRepoJson<History>(c, "data/history.json"),
-        readRepoJson<AppConfig>(c, "data/config.json"),
+        readRepoJson<{ products?: Product[] } | Product[]>(c, "public/data/products.json"),
+        readRepoJson<History>(c, "public/data/history.json"),
+        readRepoJson<AppConfig>(c, "public/data/config.json"),
       ]);
       const list = Array.isArray(p) ? p : p?.products ?? [];
       setProducts(list);
@@ -137,8 +137,8 @@ export default function Page() {
     try {
       const his = { ...history, [parsed.sku]: card?.price ? [...(history[parsed.sku] ?? []), { t: Date.now(), p: card.price }] : (history[parsed.sku] ?? []) };
       setHistory(his);
-      await writeRepoJson(cfg, "data/products.json", next, `Добавлен артикул ${parsed.sku}`);
-      await writeRepoJson(cfg, "data/history.json", his, `История: ${parsed.sku}`);
+      await writeRepoJson(cfg, "public/data/products.json", next, `Добавлен артикул ${parsed.sku}`);
+      await writeRepoJson(cfg, "public/data/history.json", his, `История: ${parsed.sku}`);
       show("Добавлено. Цена появится в графике после первой проверки Actions");
     } catch (e: any) {
       setAddErr(`Не удалось закоммитить в репо: ${e?.message}. Проверьте токен/ветку в настройках.`);
@@ -148,7 +148,7 @@ export default function Page() {
   const saveProductList = async (next: Product[], msg: string) => {
     setProducts(next);
     if (cfg) {
-      try { await writeRepoJson(cfg, "data/products.json", next, msg); } catch (e: any) { show(`Ошибка коммита: ${e?.message}`); }
+      try { await writeRepoJson(cfg, "public/data/products.json", next, msg); } catch (e: any) { show(`Ошибка коммита: ${e?.message}`); }
     }
   };
 
@@ -156,7 +156,7 @@ export default function Page() {
     const next = products.map((p) => (p.sku === sku ? { ...p, ...changes } : p));
     if (cfg) {
       // изменим локально, коммит позже в debounce не нужен — пишем сразу
-      writeRepoJson(cfg, "data/products.json", next, `Настройки ${sku}`).catch(() => {});
+      writeRepoJson(cfg, "public/data/products.json", next, `Настройки ${sku}`).catch(() => {});
     }
     setProducts(next);
   };
@@ -169,8 +169,8 @@ export default function Page() {
     setDetail(null);
     if (cfg) {
       Promise.allSettled([
-        writeRepoJson(cfg, "data/products.json", next, `Удалён ${sku}`),
-        writeRepoJson(cfg, "data/history.json", his, `История: удалён ${sku}`),
+        writeRepoJson(cfg, "public/data/products.json", next, `Удалён ${sku}`),
+        writeRepoJson(cfg, "public/data/history.json", his, `История: удалён ${sku}`),
       ]).then(() => show("Удалено"));
     }
   };
@@ -181,10 +181,10 @@ export default function Page() {
     if (!vapid) return show("VAPID-ключ не задан (README: скрипт vapid → секреты → data/config.json)");
     try {
       const sub = await registerPush(vapid);
-      const subs = (await readRepoJson<PushSub[]>(cfg, "data/push-subscriptions.json")) ?? [];
+      const subs = (await readRepoJson<PushSub[]>(cfg, "public/data/push-subscriptions.json")) ?? [];
       const j = subToJson(sub);
       if (!subs.some((s) => s.endpoint === j.endpoint)) {
-        await writeRepoJson(cfg, "data/push-subscriptions.json", [...subs, { ...j, addedAt: Date.now() }], "Подписка на push");
+        await writeRepoJson(cfg, "public/data/push-subscriptions.json", [...subs, { ...j, addedAt: Date.now() }], "Подписка на push");
       }
       localStorage.setItem(LS, JSON.stringify({ ...cfg, pushOn: true }));
       setCfg({ ...cfg, pushOn: true });
@@ -209,7 +209,7 @@ export default function Page() {
     setManualVal("");
     if (cfg) {
       try {
-        await writeRepoJson(cfg, "data/history.json", { ...history, [dProduct.sku]: pts }, `История: ручная точка ${dProduct.sku}`);
+        await writeRepoJson(cfg, "public/data/history.json", { ...history, [dProduct.sku]: pts }, `История: ручная точка ${dProduct.sku}`);
         show("Цена добавлена в график, попадёт в историю при следующей синхронизации");
       } catch (e: any) {
         show(`Точка сохранена локально, но коммит не удался: ${e?.message}`);
