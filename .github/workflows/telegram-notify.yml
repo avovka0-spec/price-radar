@@ -1,0 +1,27 @@
+name: telegram-notify
+on:
+  workflow_dispatch:
+    inputs:
+      chat_id:
+        description: "Telegram chat_id получателя"
+        required: true
+        type: string
+      text:
+        description: "Текст сообщения"
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Отправка сообщения в Telegram
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          CHAT_ID: ${{ inputs.chat_id }}
+          TEXT: ${{ inputs.text }}
+        run: |
+          curl -sS -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "$(node -e "console.log(JSON.stringify({chat_id: process.env.CHAT_ID, text: process.env.TEXT, disable_web_page_preview: true}))")"
