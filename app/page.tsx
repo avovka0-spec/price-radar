@@ -35,7 +35,7 @@ function demoData(): { products: Product[]; history: History } {
     hist[sku] = pts;
     ps.push({
       id: `demo-${sku}`, sku, url: `https://www.wildberries.ru/catalog/${sku}/detail.aspx`,
-      name, brand, image: undefined, currentPrice: pts[pts.length - 1].p,
+      name, brand, image: undefined, marketplace: "wb", currentPrice: pts[pts.length - 1].p,
       targetPrice: Math.round(base * 0.8), thresholdPct: 8, notify: true, addedAt: now - 180 * 864e5,
     });
   }
