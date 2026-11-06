@@ -1,0 +1,35 @@
+name: check-prices
+on:
+  schedule:
+    - cron: "0 */2 * * *" # каждые 2 часа
+  workflow_dispatch: {}
+permissions:
+  contents: write
+concurrency:
+  group: price-check
+  cancel-in-progress: false
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Установка web-push
+        run: npm i web-push --no-save
+      - name: Проверка цен, история, push
+        env:
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
+        run: node scripts/check-prices.mjs
+      - name: Коммит обновлённых данных
+        run: |
+          git config user.name "price-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add public/data
+          if git diff --cached --quiet; then echo "no changes"; else
+            git commit -m "data: цены $(date -u +%d.%m %H:%M UTC)"
+            git push
+          fi

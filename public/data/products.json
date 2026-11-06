@@ -1,0 +1,16 @@
+[
+  {
+    "id": "t1",
+    "sku": "9999",
+    "url": "u",
+    "name": "Тестовый товар",
+    "brand": "DEMOBrand",
+    "currentPrice": 4500,
+    "thresholdPct": 10,
+    "notify": true,
+    "addedAt": 1,
+    "lastCheckedAt": 1793625710705,
+    "lastNotifyPrice": 4500,
+    "lastNotifiedAt": 1793625701529
+  }
+]
