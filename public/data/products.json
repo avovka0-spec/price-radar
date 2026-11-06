@@ -3,7 +3,7 @@
     "id": "t1",
     "sku": "9999",
     "url": "u",
-    "name": "Тестовый товар",
+    "name": "Ð¢ÐµÑÑÐ¾Ð²ÑÐ¹ ÑÐ¾Ð²Ð°Ñ",
     "brand": "DEMOBrand",
     "currentPrice": 4500,
     "thresholdPct": 10,
@@ -12,5 +12,16 @@
     "lastCheckedAt": 1793975035435,
     "lastNotifyPrice": 4500,
     "lastNotifiedAt": 1793625701529
+  },
+  {
+    "id": "5389494c-2261-4610-8197-471f28ffd6c6",
+    "sku": "1545780372",
+    "url": "https://www.wildberries.ru/catalog/1545780372/detail.aspx",
+    "name": "— название придёт после следующей проверки",
+    "brand": "",
+    "image": "https://basket-16.wbbasket.ru/vol15457/part1545780/1545780372/images/c246x328/1.webp",
+    "thresholdPct": 10,
+    "notify": true,
+    "addedAt": 1793978460143
   }
 ]
