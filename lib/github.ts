@@ -50,12 +50,24 @@ async function ghJson<T>(cfg: GhConfig, path: string, init?: RequestInit): Promi
   return res.json();
 }
 
-/** Проверяет токен и возвращает login пользователя (кнопка «Проверить токен»). */
+/** Проверяет токен и доступ к Contents (кнопка «Проверить токен»). */
 export async function checkToken(cfg: GhConfig): Promise<string> {
   if (!cfg.token) throw new Error("Токен не задан");
   const res = await fetch("https://api.github.com/user", { headers: headers(cfg.token) });
   if (!res.ok) throw new GhError(res.status, apiError(res.status, await res.text()));
   const user = (await res.json()) as { login?: string };
+
+  // Проверяем именно доступ к файлам: токен с правами только Issues сюда не подойдёт.
+  const repoRes = await fetch(
+    `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/public/data/products.json?ref=${cfg.branch}`,
+    { headers: headers(cfg.token) },
+  );
+  if (!repoRes.ok) {
+    throw new GhError(
+      repoRes.status,
+      "Токен валиден, но нет доступа к Contents репозитория. Нужен fine-grained токен с правом Contents: Read and write на этот репозиторий.",
+    );
+  }
   return user.login ?? "ok";
 }
 
