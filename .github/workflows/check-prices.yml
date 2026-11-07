@@ -1,7 +1,9 @@
 name: check-prices
 on:
-  schedule:
-    - cron: "0 */2 * * *" # каждые 2 часа
+  # Цены обновляет локальный агент на домашнем ПК (scripts/check-prices-local.mjs):
+  # WB блокирует GitHub-раннеры. Workflow оставлен для ручного запуска.
+  # schedule:
+  #   - cron: "0 */2 * * *"
   workflow_dispatch: {}
 permissions:
   contents: write

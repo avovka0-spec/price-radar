@@ -141,7 +141,8 @@ price-radar/
 ├── components/Chart.tsx    # SVG-график цены
 ├── lib/                    # wb.ts (парсеры ссылок), github.ts (Contents API), push.ts
 ├── scripts/
-│   ├── check-prices.mjs    # воркер цен (запускается Actions)
+│   ├── check-prices.mjs    # воркер цен для Actions (ручной запуск)
+│   ├── check-prices-local.mjs  # локальный воркер цен на домашнем ПК
 │   ├── wb-relay.mjs        # WB-прокси для запуска на RU VPS
 │   ├── telegram-to-issues.mjs  # опрос бота → Issues
 │   ├── notify-telegram.mjs # статусы/отчёты агента → Telegram
@@ -151,7 +152,8 @@ price-radar/
 │   └── telegram-webhook.js # Worker: Telegram webhook → GitHub Issue
 ├── docs/
 │   ├── telegram-webhook.md # пошаговая настройка Cloudflare Worker
-│   └── wb-proxy.md         # WB-прокси на RU VPS
+│   ├── wb-proxy.md         # WB-прокси на RU VPS
+│   └── local-agent.md      # локальный агент цен на домашнем ПК
 ├── .github/workflows/
 │   ├── check-prices.yml    # cron каждые 2 часа
 │   ├── deploy-pages.yml    # деплой на GitHub Pages
@@ -178,8 +180,10 @@ npm run build && npx serve out   # статический превью
 
 ## 8. Важные нюансы
 
-- **WB** — открытый API `card.wb.ru`; с GitHub-раннеров (не РФ) часто 403. Воркер ходит
-  через RU-релей: задайте секрет `WB_PROXY_URL`. Инструкция: [docs/wb-proxy.md](docs/wb-proxy.md).
+- **WB** — открытый API `card.wb.ru`; GitHub-раннеры и headless-браузеры получают 403/498.
+  Цены обновляет **локальный агент на домашнем ПК** через видимый Edge:
+  [docs/local-agent.md](docs/local-agent.md). Расписание Actions `check-prices` отключено.
+  Альтернатива для сервера — RU-релей `WB_PROXY_URL` ([docs/wb-proxy.md](docs/wb-proxy.md)).
 - **Ozon / AliExpress** — нет открытого API; цены вводятся вручную (как в xmix.pro) или
   через бэкенд с Playwright.
 - **История цен** копится с момента добавления товара (ретроспектива недоступна).
@@ -201,8 +205,10 @@ npm run build && npx serve out   # статический превью
 - **401 на iPhone** — токен приложения недействителен или отозван. Создайте fine-grained
   токен с **Contents: Read and write** и вставьте его в настройках приложения; там же есть
   кнопка «Проверить токен». Чтение публичного репозитория теперь работает и без токена.
-- **Цена и название не обновляются** — в логе `check-prices` `WB 403`: GitHub-раннер не
-  может достучаться до WB. Задайте `WB_PROXY_URL` по инструкции [docs/wb-proxy.md](docs/wb-proxy.md).
+- **Цена и название не обновляются** — проверьте `logs/check-prices.log` локального агента.
+  Если там `parse failed`/`498`, запустите `PRICE_RADAR_MINIMIZED=0 node scripts/check-prices-local.mjs`
+  и пройдите капчу; если агент не запущен — настройте расписание по
+  [docs/local-agent.md](docs/local-agent.md).
 - `git push` просит пароль — настройте Git Credential Manager и войдите под `avovka0-spec`.
 - Issues из Telegram не появляются: Actions → `telegram-webhook` → `action=info` (проверьте
   `last_error_message`), логи Worker в Cloudflare, совпадение `WEBHOOK_SECRET` и
