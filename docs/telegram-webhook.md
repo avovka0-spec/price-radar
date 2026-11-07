@@ -71,6 +71,30 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 > Проверка: если открыть URL в браузере, Worker ответит `405 Method Not Allowed` —
 > это нормально, он принимает только POST от Telegram.
 
+### Если редактор Cloudflare не загружается
+
+В РФ панель Cloudflare иногда не подгружает редактор кода: пустой экран,
+в Preview — `Token and remote not found`. Это глюк панели, а не Worker'а.
+Можно задеплоить через Wrangler CLI из папки `cloudflare`:
+
+```powershell
+cd D:\Prog_dev\ai\price-radar\cloudflare
+npx wrangler login
+npx wrangler deploy
+```
+
+`npx wrangler login` откроет браузер — войдите в тот же аккаунт Cloudflare и
+разрешите доступ. После деплоя задайте секреты (каждая команда спросит значение):
+
+```powershell
+npx wrangler secret put GH_TOKEN
+npx wrangler secret put WEBHOOK_SECRET
+npx wrangler secret put TELEGRAM_BOT_TOKEN
+```
+
+Проверка: `curl.exe -i https://price-radar-tg.avovka0.workers.dev/` должен вернуть
+`405 Method Not Allowed`, а не `Hello World!`.
+
 ## 4. GitHub-секрет для управления webhook
 
 В репозитории: **Settings → Secrets and variables → Actions → New repository secret**:

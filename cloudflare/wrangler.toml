@@ -1,0 +1,13 @@
+name = "price-radar-tg"
+main = "telegram-webhook.js"
+compatibility_date = "2026-11-07"
+workers_dev = true
+
+# Несекретные переменные. Секреты задаются через:
+#   npx wrangler secret put GH_TOKEN
+#   npx wrangler secret put WEBHOOK_SECRET
+#   npx wrangler secret put TELEGRAM_BOT_TOKEN
+[vars]
+GH_OWNER = "avovka0-spec"
+GH_REPO = "price-radar"
+TELEGRAM_CHAT_ID = "1782021699"
