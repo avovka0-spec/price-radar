@@ -1,7 +1,7 @@
 // GitHub Actions: опрос Telegram-бота, создание Issue из новых сообщений, сохранение offset.
 // Запускается по расписанию (каждые 5 мин) и вручную.
-const https = require("https");
-const fs = require("fs");
+import * as https from "node:https";
+import * as fs from "node:fs";
 
 const BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
 const GH_TOKEN = process.env.GITHUB_TOKEN;
