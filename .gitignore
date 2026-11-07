@@ -4,3 +4,8 @@ out/
 *.tsbuildinfo
 next-env.d.ts
 .DS_Store
+
+# секреты: токены и chat_id не должны попадать в публичный репозиторий
+.env
+.env.*
+!.env.example

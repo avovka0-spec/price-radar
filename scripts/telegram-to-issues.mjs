@@ -1,5 +1,8 @@
 // GitHub Actions: опрос Telegram-бота, создание Issue из новых сообщений, сохранение offset.
 // Запускается по расписанию (каждые 5 мин) и вручную.
+//
+// offset сохраняется после каждого успешно обработанного сообщения: если на следующем
+// сообщении API упадёт, при повторном запуске дубликатов уже созданных Issues не будет.
 import * as https from "node:https";
 import * as fs from "node:fs";
 
@@ -61,49 +64,86 @@ async function ghCreateIssue(title, body) {
   return r.body;
 }
 
+function readOffset() {
+  try {
+    const data = JSON.parse(fs.readFileSync(OFFSET_FILE, "utf8"));
+    return Number(data.last_update_id) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+function saveOffset(lastUpdateId) {
+  fs.mkdirSync(P, { recursive: true });
+  fs.writeFileSync(
+    OFFSET_FILE,
+    JSON.stringify({ last_update_id: lastUpdateId, updated_at: new Date().toISOString() }, null, 2) + "\n",
+  );
+}
+
 (async () => {
-  if (!BOT_TOKEN) { console.log("no BOT_TOKEN, skip"); process.exit(0); }
+  if (!BOT_TOKEN) { console.log("no BOT_TOKEN, skip"); return; }
 
-  let offsetData = { offset: 0 };
-  try { offsetData = JSON.parse(fs.readFileSync(OFFSET_FILE, "utf8")); } catch {}
-  let offset = (offsetData.offset || 0) + (offsetData.offset ? 1 : 0);
-  // offset semantics: getUpdates offset = last_update_id + 1 to skip processed
-  if (offsetData.last_update_id) offset = offsetData.last_update_id + 1;
-
+  const lastSaved = readOffset();
+  const offset = lastSaved ? lastSaved + 1 : 0;
+  // offset semantics: getUpdates offset = last_update_id + 1, чтобы пропустить обработанные
   const updates = await tgGetUpdates(offset);
-  console.log("updates:", updates.length);
+  console.log(`updates: ${updates.length}, offset: ${offset}`);
 
-  let maxId = offsetData.last_update_id || 0;
-  let changed = false;
+  let processed = lastSaved;
+  let errors = 0;
 
-  for (const u of updates) {
-    if (u.update_id > maxId) maxId = u.update_id;
+  for (const u of updates.slice().sort((a, b) => a.update_id - b.update_id)) {
     const msg = u.message;
-    if (!msg || !msg.text) continue;
+    // Нетекстовые апдейты (фото, стикеры и т.п.) просто подтверждаем.
+    if (!msg || !msg.text) { processed = u.update_id; continue; }
+
     if (String(msg.chat.id) !== String(ALLOWED_CHAT)) {
       console.log("skip chat", msg.chat.id);
+      processed = u.update_id;
       continue;
     }
+
     const text = msg.text.trim();
-    if (!text) continue;
-    // команда /start, /help — пропускаем
-    if (text.startsWith("/start") || text.startsWith("/help")) continue;
+    if (!text) { processed = u.update_id; continue; }
+    if (text.startsWith("/start") || text.startsWith("/help")) { processed = u.update_id; continue; }
 
-    const title = text.split("\n")[0].slice(0, 80) || "Задача из Telegram";
-    const body = `**От:** ${msg.from.first_name || ""} ${msg.from.username ? "(@" + msg.from.username + ")" : ""}\n**Дата:** ${new Date(msg.date * 1000).toISOString()}\n\n${text}\n\n---\n_Создано автоматически из Telegram-бота._`;
-    const issue = await ghCreateIssue(title, body);
-    console.log("created issue:", issue.number, issue.html_url);
-    changed = true;
+    const title = (text.split("\n")[0].trim() || "Задача из Telegram").slice(0, 80);
+    const from = [msg.from && msg.from.first_name, msg.from && msg.from.username ? `(@${msg.from.username})` : ""]
+      .filter(Boolean).join(" ");
+    const body = [
+      `**От:** ${from || "Telegram"}`,
+      `**Дата:** ${new Date(msg.date * 1000).toISOString()}`,
+      "",
+      text,
+      "",
+      "---",
+      "_Создано автоматически из Telegram-бота._",
+      `<!-- telegram-update-id: ${u.update_id} -->`,
+    ].join("\n");
+
+    try {
+      const issue = await ghCreateIssue(title, body);
+      console.log("created issue:", issue.number, issue.html_url);
+      processed = u.update_id;
+      // Фиксируем прогресс сразу: сбой на следующем сообщении не приведёт к дубликатам.
+      saveOffset(processed);
+    } catch (e) {
+      // Не двигаем offset за неудачное сообщение — повторим при следующем запуске.
+      console.error(`failed update ${u.update_id}:`, e && e.message ? e.message : String(e));
+      errors++;
+      break;
+    }
   }
 
-  if (maxId > (offsetData.last_update_id || 0)) {
-    fs.writeFileSync(OFFSET_FILE, JSON.stringify({ last_update_id: maxId, updated_at: new Date().toISOString() }, null, 2));
-    changed = true;
+  if (processed > lastSaved) {
+    saveOffset(processed);
+    console.log("offset updated to", processed);
+  } else {
+    console.log("offset unchanged", processed);
   }
 
-  if (changed) console.log("offset updated to", maxId);
-  else console.log("no changes");
-  process.exit(0);
+  if (errors) process.exitCode = 1;
 })().catch((e) => {
   console.error(e && e.stack ? e.stack : String(e));
   process.exit(1);

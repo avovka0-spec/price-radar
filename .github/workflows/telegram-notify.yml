@@ -10,6 +10,9 @@ on:
         description: "Текст сообщения (UTF-8)"
         required: true
         type: string
+  # Fallback для токенов без scope workflow (достаточно scope repo).
+  repository_dispatch:
+    types: [telegram-notify]
 permissions:
   contents: read
 jobs:
@@ -19,8 +22,8 @@ jobs:
       - name: Отправка сообщения в Telegram (UTF-8 через Node)
         env:
           BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          CHAT_ID: ${{ inputs.chat_id }}
-          TEXT: ${{ inputs.text }}
+          CHAT_ID: ${{ github.event.inputs.chat_id || github.event.client_payload.chat_id }}
+          TEXT: ${{ github.event.inputs.text || github.event.client_payload.text }}
         run: |
           node << 'NODE_EOF'
           const https = require("https");

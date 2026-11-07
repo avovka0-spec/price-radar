@@ -6,9 +6,14 @@ on:
 permissions:
   contents: write
   issues: write
+concurrency:
+  # Плановый и ручной запуски не должны идти одновременно — иначе дубли Issues.
+  group: telegram-to-issues
+  cancel-in-progress: false
 jobs:
   poll:
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -23,11 +28,18 @@ jobs:
           GH_REPO: price-radar
         run: node scripts/telegram-to-issues.mjs
       - name: Коммит offset
+        # Выполняется даже при ошибке опроса: прогресс, сохранённый скриптом, не теряется.
+        if: always()
         run: |
           git config user.name "tg-bot"
           git config user.email "actions@users.noreply.github.com"
           git add public/data/telegram-offset.json
-          if git diff --cached --quiet; then echo "no offset changes"; else
-            git commit -m "data: telegram offset"
-            git push
-          fi
+          if git diff --cached --quiet; then echo "no offset changes"; exit 0; fi
+          git commit -m "data: telegram offset"
+          for i in 1 2 3; do
+            git pull --rebase origin main && git push && exit 0
+            echo "push attempt $i failed, retrying"
+            sleep 3
+          done
+          echo "push failed after retries" >&2
+          exit 1

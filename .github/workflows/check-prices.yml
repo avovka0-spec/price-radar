@@ -29,7 +29,12 @@ jobs:
           git config user.name "price-bot"
           git config user.email "actions@users.noreply.github.com"
           git add public/data
-          if git diff --cached --quiet; then echo "no changes"; else
-            git commit -m "data: цены $(date -u +%d.%m %H:%M UTC)"
-            git push
-          fi
+          if git diff --cached --quiet; then echo "no changes"; exit 0; fi
+          git commit -m "data: цены $(date -u +%d.%m %H:%M UTC)"
+          for i in 1 2 3; do
+            git pull --rebase --autostash origin main && git push && exit 0
+            echo "push attempt $i failed, retrying"
+            sleep 3
+          done
+          echo "push failed after retries" >&2
+          exit 1
