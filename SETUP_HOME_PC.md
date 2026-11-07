@@ -51,6 +51,10 @@ TELEGRAM_CHAT_ID=1782021699
 4. `.env` уже добавлен в `.gitignore` — в публичный репозиторий он не попадёт.
    **Никогда не коммитьте `.env` и не вставляйте токен в Issues/чат.**
 
+> **Важно:** это токены для OpenCode и Worker'а. Приложению на iPhone нужен **отдельный**
+> fine-grained токен с правом **Contents: Read and write** — он вводится в настройках
+> приложения и хранится в localStorage. Токен Worker'а (Issues) для приложения не подходит.
+
 Если OpenCode не видит переменные из `.env`, задайте их в системе и перезапустите OpenCode:
 
 ```
@@ -138,6 +142,7 @@ price-radar/
 ├── lib/                    # wb.ts (парсеры ссылок), github.ts (Contents API), push.ts
 ├── scripts/
 │   ├── check-prices.mjs    # воркер цен (запускается Actions)
+│   ├── wb-relay.mjs        # WB-прокси для запуска на RU VPS
 │   ├── telegram-to-issues.mjs  # опрос бота → Issues
 │   ├── notify-telegram.mjs # статусы/отчёты агента → Telegram
 │   ├── gen-icons.mjs       # генерация иконок
@@ -145,7 +150,8 @@ price-radar/
 ├── cloudflare/
 │   └── telegram-webhook.js # Worker: Telegram webhook → GitHub Issue
 ├── docs/
-│   └── telegram-webhook.md # пошаговая настройка Cloudflare Worker
+│   ├── telegram-webhook.md # пошаговая настройка Cloudflare Worker
+│   └── wb-proxy.md         # WB-прокси на RU VPS
 ├── .github/workflows/
 │   ├── check-prices.yml    # cron каждые 2 часа
 │   ├── deploy-pages.yml    # деплой на GitHub Pages
@@ -172,8 +178,8 @@ npm run build && npx serve out   # статический превью
 
 ## 8. Важные нюансы
 
-- **WB** — открытый API `card.wb.ru`, работает из РФ и с CI (иногда 403 с зарубежных IP —
-  тогда нужен прокси через секрет `WB_PROXY_URL`).
+- **WB** — открытый API `card.wb.ru`; с GitHub-раннеров (не РФ) часто 403. Воркер ходит
+  через RU-релей: задайте секрет `WB_PROXY_URL`. Инструкция: [docs/wb-proxy.md](docs/wb-proxy.md).
 - **Ozon / AliExpress** — нет открытого API; цены вводятся вручную (как в xmix.pro) или
   через бэкенд с Playwright.
 - **История цен** копится с момента добавления товара (ретроспектива недоступна).
@@ -192,10 +198,16 @@ npm run build && npx serve out   # статический превью
 - Статусы не приходят: `node scripts/notify-telegram.mjs "тест"` → Actions → telegram-notify.
   Если 403 — у токена нет scope `workflow`, добавьте его или используйте fallback
   `repository_dispatch` (нужен scope `repo`).
+- **401 на iPhone** — токен приложения недействителен или отозван. Создайте fine-grained
+  токен с **Contents: Read and write** и вставьте его в настройках приложения; там же есть
+  кнопка «Проверить токен». Чтение публичного репозитория теперь работает и без токена.
+- **Цена и название не обновляются** — в логе `check-prices` `WB 403`: GitHub-раннер не
+  может достучаться до WB. Задайте `WB_PROXY_URL` по инструкции [docs/wb-proxy.md](docs/wb-proxy.md).
 - `git push` просит пароль — настройте Git Credential Manager и войдите под `avovka0-spec`.
 - Issues из Telegram не появляются: Actions → `telegram-webhook` → `action=info` (проверьте
   `last_error_message`), логи Worker в Cloudflare, совпадение `WEBHOOK_SECRET` и
   `TELEGRAM_WEBHOOK_SECRET`. Инструкция: `docs/telegram-webhook.md`.
-- Если WB возвращает 403 — задайте секрет `WB_PROXY_URL` (мини-relay на RU VPS).
+- Если WB возвращает 403 — задайте секрет `WB_PROXY_URL` (мини-relay на RU VPS,
+  см. [docs/wb-proxy.md](docs/wb-proxy.md)).
 - Если Push не включается — проверьте, что VAPID-секреты заданы и приложение установлено
   на домашний экран.

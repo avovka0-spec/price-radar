@@ -9,13 +9,20 @@ const DAY = 24 * 3600 * 1000;
 
 // card.wb.ru варьирует эндпоинты/гео-фильтр; пробуем несколько вариантов, плюс
 // опциональный собственный relay (секрет WB_PROXY_URL, см. README).
-const ENDPOINTS = (proxy, sku) => [
-  ...(proxy ? [`${proxy}?nm=${sku}`] : []), // свой relay: ?nm=123 (сам ходит на card.wb.ru с RU-IP)
-  `https://card.wb.ru/cards/v2/detail?appType=1&curr=rub&dest=-1257786&spp=30&nm=${sku}`,
-  `https://card.wb.ru/cards/v2/detail?appType=1&curr=rub&dest=-1257786&spp=0&nm=${sku}`,
-  `https://card.wb.ru/cards/v1/detail?appType=1&curr=rub&dest=-1257786&spp=0&nm=${sku}`,
-  `https://search.wb.ru/exactmatch/ru/common/v9/search?appType=1&curr=rub&dest=-1257786&spp=0&query=${sku}`,
-];
+const ENDPOINTS = (proxy, sku) => {
+  const sep = proxy && proxy.includes("?") ? "&" : "?";
+  return [
+    ...(proxy ? [`${proxy}${sep}nm=${sku}`] : []), // свой relay: .../wb?key=...&nm=123 (ходит на card.wb.ru с RU-IP)
+    `https://card.wb.ru/cards/v2/detail?appType=1&curr=rub&dest=-1257786&spp=30&nm=${sku}`,
+    `https://card.wb.ru/cards/v2/detail?appType=1&curr=rub&dest=-1257786&spp=0&nm=${sku}`,
+    `https://card.wb.ru/cards/v1/detail?appType=1&curr=rub&dest=-1257786&spp=0&nm=${sku}`,
+    `https://search.wb.ru/exactmatch/ru/common/v9/search?appType=1&curr=rub&dest=-1257786&spp=0&query=${sku}`,
+  ];
+};
+
+if (!process.env.WB_PROXY_URL) {
+  console.log("! WB_PROXY_URL не задан — GitHub runner может получить 403 от WB");
+}
 const UA = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile Safari/604.1";
 
 const products = JSON.parse(readFileSync(`${P}/products.json`, "utf8"));
@@ -111,10 +118,11 @@ process.exit(0);
 // --- fetch helper ---
 async function fetchCard(sku) {
   const proxy = process.env.WB_PROXY_URL ?? "";
+  let blocked = false;
   for (const u of ENDPOINTS(proxy, sku)) {
     try {
       const res = await fetch(u, { headers: { "User-Agent": UA, Accept: "*/*" }, signal: AbortSignal.timeout(15000) });
-      if (res.status === 403) continue; // гео-фильтр — пробуем следующий вариант
+      if (res.status === 403) { blocked = true; continue; } // гео-фильтр — пробуем следующий вариант
       if (!res.ok) continue;
       const j = await res.json();
       const pr = j?.data?.products?.[0] ?? j?.products?.[0] ?? j?.data?.[0];
@@ -125,6 +133,7 @@ async function fetchCard(sku) {
       console.log(`fetch err ${sku}: ${e?.message}`);
     }
   }
+  if (blocked) console.log(`WB 403 для ${sku}: нужен WB_PROXY_URL (RU-релей)`);
   return null;
 }
 

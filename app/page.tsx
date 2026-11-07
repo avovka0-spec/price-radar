@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Chart, { fmt } from "@/components/Chart";
 import { parseProductLink, wbImageUrl, fetchWbCard } from "@/lib/wb";
 import type { Product, History, PushSub, AppConfig } from "@/lib/types";
-import { GhConfig, readRepoJson, writeRepoJson } from "@/lib/github";
+import { GhConfig, readRepoJson, writeRepoJson, checkToken } from "@/lib/github";
 import { registerPush, subToJson } from "@/lib/push";
 
 const LS = "pradar.cfg.v1";
@@ -532,7 +532,18 @@ function SettingsSheet({ open, onClose, cfg, onSave, onRefresh, onPush, vapid, i
   const [repo, setRepo] = useState(cfg?.repo ?? "");
   const [token, setToken] = useState(cfg?.token ?? "");
   const [branch, setBranch] = useState(cfg?.branch ?? "main");
-  useEffect(() => { if (open && cfg) { setOwner(cfg.owner); setRepo(cfg.repo); setToken(cfg.token); setBranch(cfg.branch); } }, [open, cfg]);
+  const [tokenCheck, setTokenCheck] = useState("");
+  useEffect(() => { if (open && cfg) { setOwner(cfg.owner); setRepo(cfg.repo); setToken(cfg.token); setBranch(cfg.branch); setTokenCheck(""); } }, [open, cfg]);
+
+  const testToken = async () => {
+    setTokenCheck("Проверяю…");
+    try {
+      const login = await checkToken({ owner: owner.trim(), repo: repo.trim(), token: token.trim(), branch: branch.trim() || "main" });
+      setTokenCheck(`✅ Токен работает (${login})`);
+    } catch (e: any) {
+      setTokenCheck(`❌ ${e?.message ?? "Ошибка проверки токена"}`);
+    }
+  };
   return (
     <>
       {open && <div className="overlay show" onClick={onClose} />}
@@ -553,6 +564,12 @@ function SettingsSheet({ open, onClose, cfg, onSave, onRefresh, onPush, vapid, i
           </div>
           <div className="field"><label>Ветка</label><input value={branch} onChange={(e) => setBranch(e.target.value)} autoCapitalize="none" /></div>
           <div className="field"><label>GitHub-токен (Contents: Read and write)</label><input value={token} onChange={(e) => setToken(e.target.value)} type="password" autoCapitalize="none" autoCorrect="off" /></div>
+          <div className="sub" style={{ marginTop: -4, marginBottom: 8 }}>
+            Токен нужен для добавления и изменения товаров. Чтение публичного репозитория работает и без него.
+          </div>
+          <button className="ghost" style={{ width: "100%" }} disabled={!token} onClick={testToken}>Проверить токен</button>
+          {tokenCheck && <div className="sub" style={{ marginTop: 6 }}>{tokenCheck}</div>}
+          <div style={{ height: 8 }} />
           <button style={{ width: "100%" }} onClick={() => onSave({ owner: owner.trim(), repo: repo.trim(), token: token.trim(), branch: branch.trim() || "main" })}>Сохранить конфигурацию</button>
 
           <div style={{ height: 12 }} />
