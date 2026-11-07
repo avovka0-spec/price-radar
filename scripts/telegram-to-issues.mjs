@@ -41,13 +41,22 @@ async function tgGetUpdates(offset) {
 }
 
 async function ghCreateIssue(title, body) {
-  const data = JSON.stringify({ title, body, labels: ["telegram-task"] });
-  const r = await http("POST", `https://api.github.com/repos/${OWNER}/${REPO}/issues`, {
-    Authorization: `Bearer ${GH_TOKEN}`,
-    Accept: "application/vnd.github+json",
-    "Content-Type": "application/json",
-    "Content-Length": Buffer.byteLength(data),
-  }, data);
+  const make = async (labels) => {
+    const payload = { title, body };
+    if (labels && labels.length) payload.labels = labels;
+    const data = JSON.stringify(payload);
+    return http("POST", `https://api.github.com/repos/${OWNER}/${REPO}/issues`, {
+      Authorization: `Bearer ${GH_TOKEN}`,
+      Accept: "application/vnd.github+json",
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(data),
+    }, data);
+  };
+  let r = await make(["telegram-task"]);
+  if (r.status === 422 && /label/i.test(r.raw || "")) {
+    console.log("telegram-task label missing, retrying without label");
+    r = await make([]);
+  }
   if (r.status < 200 || r.status >= 300) throw new Error("createIssue failed: " + r.raw);
   return r.body;
 }
@@ -95,4 +104,7 @@ async function ghCreateIssue(title, body) {
   if (changed) console.log("offset updated to", maxId);
   else console.log("no changes");
   process.exit(0);
-})();
+})().catch((e) => {
+  console.error(e && e.stack ? e.stack : String(e));
+  process.exit(1);
+});
