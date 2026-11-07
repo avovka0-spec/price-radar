@@ -1,7 +1,11 @@
 name: telegram-to-issues
 on:
-  schedule:
-    - cron: "*/5 * * * *" # каждые 5 минут
+  # Основной режим — Telegram webhook через Cloudflare Worker (docs/telegram-webhook.md).
+  # Telegram не разрешает webhook и getUpdates одновременно (409 Conflict), поэтому
+  # polling оставлен только для ручного запуска/отката. Раскомментируйте schedule
+  # после deleteWebhook, если понадобится вернуться к опросу.
+  # schedule:
+  #   - cron: "*/5 * * * *"
   workflow_dispatch: {}
 permissions:
   contents: write

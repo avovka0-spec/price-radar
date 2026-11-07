@@ -80,19 +80,19 @@ git config --global credential.helper manager
 - закоммитит и запушит;
 - пришлёт статусы в Telegram (начало, этапы, завершение/ошибка) — см. раздел 5.
 
-### Способ B: через Telegram-бота (асинхронно)
+### Способ B: через Telegram-бота (асинхронно, мгновенно)
 
 1. Откройте бота **@opencodeOtchetBot** в Telegram.
 2. Отправьте сообщение с задачей (например: «Добавь поддержку Ozon в воркер цен»).
-3. Workflow `telegram-to-issues` опрашивает бота и создаёт GitHub Issue с меткой `telegram-task`.
+3. Cloudflare Worker принимает webhook от Telegram и сразу создаёт GitHub Issue с меткой
+   `telegram-task`. В ответ бот присылает «✅ Задача принята: Issue #N».
 4. Когда вернётесь в OpenCode — скажите агенту: «Выполни задачи из Issues» — он прочитает
    Issues, выполнит и пришлёт отчёт в Telegram.
 
-> **Важно про расписание.** GitHub Actions cron — best-effort: запуск «каждые 5 минут» на
-> практике может задерживаться на десятки минут и часы (проверено на этом репозитории).
-> Если задача нужна срочно — откройте Actions → `telegram-to-issues` → **Run workflow**
-> вручную. Для гарантированных 5 минут нужен внешний планировщик (cron-job.org и т.п.)
-> или Telegram-webhook через Cloudflare Worker.
+Настройка webhook: **[docs/telegram-webhook.md](docs/telegram-webhook.md)** (20–30 минут,
+бесплатно). Пока webhook не настроен, можно запускать `telegram-to-issues` вручную.
+После включения webhook polling отключён: Telegram не разрешает webhook и `getUpdates`
+одновременно.
 
 ## 5. Статусы и отчёты в Telegram
 
@@ -142,11 +142,16 @@ price-radar/
 │   ├── notify-telegram.mjs # статусы/отчёты агента → Telegram
 │   ├── gen-icons.mjs       # генерация иконок
 │   └── generate-vapid.mjs  # генерация VAPID-ключей
+├── cloudflare/
+│   └── telegram-webhook.js # Worker: Telegram webhook → GitHub Issue
+├── docs/
+│   └── telegram-webhook.md # пошаговая настройка Cloudflare Worker
 ├── .github/workflows/
 │   ├── check-prices.yml    # cron каждые 2 часа
 │   ├── deploy-pages.yml    # деплой на GitHub Pages
 │   ├── telegram-notify.yml # ретранслятор статусов/отчётов
-│   └── telegram-to-issues.yml  # задачи из Telegram
+│   ├── telegram-to-issues.yml  # polling (ручной fallback)
+│   └── telegram-webhook.yml    # setWebhook / deleteWebhook / getWebhookInfo
 ├── public/data/            # данные (products, history, config, telegram-offset)
 ├── AGENTS.md               # правила агента (в т.ч. статусы в Telegram)
 ├── .env.example            # шаблон переменных (сам .env не коммитится)
@@ -175,10 +180,10 @@ npm run build && npx serve out   # статический превью
 - **Push на iPhone** работает только для PWA, установленной через «На экран Домой» (iOS 16.4+).
 - **Токен приложения** (fine-grained, Contents: Read/Write) хранится в localStorage телефона,
   не в репозитории.
-- **Cron GitHub Actions** не гарантирует точное время. Для критичных задач запускайте
-  `telegram-to-issues` вручную или используйте внешний планировщик.
-- **`public/data/telegram-offset.json`** хранит id последнего обработанного сообщения.
-  Не удаляйте его вручную: иначе бот может повторно создать Issues из старых сообщений.
+- **Задачи из Telegram** идут через webhook Cloudflare Worker — мгновенно. Polling
+  `telegram-to-issues` оставлен как ручной откат; расписание отключено.
+- **`public/data/telegram-offset.json`** нужен только для polling. При работе через
+  webhook дедупликация идёт по маркеру `telegram-update-id` в теле Issue.
 
 ## 9. Если что-то не работает
 
@@ -188,8 +193,9 @@ npm run build && npx serve out   # статический превью
   Если 403 — у токена нет scope `workflow`, добавьте его или используйте fallback
   `repository_dispatch` (нужен scope `repo`).
 - `git push` просит пароль — настройте Git Credential Manager и войдите под `avovka0-spec`.
-- Issues из Telegram не появляются: проверьте `TELEGRAM_CHAT_ID`, offset и запустите
-  `telegram-to-issues` вручную.
+- Issues из Telegram не появляются: Actions → `telegram-webhook` → `action=info` (проверьте
+  `last_error_message`), логи Worker в Cloudflare, совпадение `WEBHOOK_SECRET` и
+  `TELEGRAM_WEBHOOK_SECRET`. Инструкция: `docs/telegram-webhook.md`.
 - Если WB возвращает 403 — задайте секрет `WB_PROXY_URL` (мини-relay на RU VPS).
 - Если Push не включается — проверьте, что VAPID-секреты заданы и приложение установлено
   на домашний экран.

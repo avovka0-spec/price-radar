@@ -1,0 +1,77 @@
+name: telegram-webhook
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "set — включить webhook, delete — выключить, info — проверить"
+        required: true
+        default: "info"
+        type: choice
+        options:
+          - info
+          - set
+          - delete
+      url:
+        description: "URL Cloudflare Worker (только для action=set)"
+        required: false
+        type: string
+permissions:
+  contents: read
+jobs:
+  webhook:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Telegram webhook
+        env:
+          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          WEBHOOK_SECRET: ${{ secrets.TELEGRAM_WEBHOOK_SECRET }}
+          ACTION: ${{ inputs.action }}
+          WORKER_URL: ${{ inputs.url }}
+        run: |
+          node << 'NODE_EOF'
+          const https = require("https");
+          const token = process.env.BOT_TOKEN;
+          const action = process.env.ACTION || "info";
+          const secret = process.env.WEBHOOK_SECRET || "";
+          const workerUrl = (process.env.WORKER_URL || "").trim();
+          if (!token) { console.error("TELEGRAM_BOT_TOKEN secret is not set"); process.exit(1); }
+
+          let methodName;
+          let payload;
+          if (action === "set") {
+            if (!workerUrl) { console.error("url is required for action=set"); process.exit(1); }
+            if (!secret) { console.error("TELEGRAM_WEBHOOK_SECRET secret is not set"); process.exit(1); }
+            methodName = "setWebhook";
+            payload = JSON.stringify({ url: workerUrl, secret_token: secret, allowed_updates: ["message"] });
+          } else if (action === "delete") {
+            methodName = "deleteWebhook";
+            payload = JSON.stringify({ drop_pending_updates: false });
+          } else {
+            methodName = "getWebhookInfo";
+            payload = JSON.stringify({});
+          }
+
+          const req = https.request({
+            hostname: "api.telegram.org",
+            path: "/bot" + token + "/" + methodName,
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Content-Length": Buffer.byteLength(payload),
+            },
+          }, (res) => {
+            let buf = "";
+            res.on("data", (c) => (buf += c));
+            res.on("end", () => {
+              console.log("HTTP", res.statusCode);
+              console.log(buf);
+              let ok = false;
+              try { ok = JSON.parse(buf).ok === true; } catch {}
+              process.exit(res.statusCode === 200 && ok ? 0 : 1);
+            });
+          });
+          req.on("error", (e) => { console.error(e); process.exit(1); });
+          req.write(payload);
+          req.end();
+          NODE_EOF
