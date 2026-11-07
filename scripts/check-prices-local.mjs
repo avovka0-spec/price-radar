@@ -99,13 +99,18 @@ async function fetchCard(ctx, sku) {
       const priceEl = document.querySelector('[class*="priceBlockPrice"]');
       const nameEl = document.querySelector('[class*="productNameContainer"]');
       const h2 = document.querySelector("h2");
+      const badges = document.querySelector('[class*="productHeaderBadges"]');
+      const og = document.querySelector('meta[property="og:image"]');
       const img =
-        document.querySelector('img[src*="/images/c246x328/"]') ||
-        document.querySelector('img[src*="wbbasket.ru"]');
+        document.querySelector('img[src*="/vol"][src*="/images/"]') ||
+        document.querySelector('img[src*="/images/"]');
       return {
         priceText: priceEl ? priceEl.textContent : "",
-        nameText: nameEl ? nameEl.textContent : h2 ? h2.textContent : "",
+        nameText: nameEl ? nameEl.textContent : "",
+        h2Text: h2 ? h2.textContent : "",
+        badgesText: badges ? badges.textContent : "",
         title: document.title,
+        ogImage: og ? og.getAttribute("content") || "" : "",
         image: img ? img.currentSrc || img.src || "" : "",
         url: location.href,
       };
@@ -117,27 +122,35 @@ async function fetchCard(ctx, sku) {
       if (m) price = parsePrice(m[1]);
     }
 
+    const clean = (s) => String(s || "").replace(/\s+/g, " ").trim();
+    const candidates = [clean(data.h2Text), clean(data.nameText)].filter(
+      (s) => s.length > 10 && !/^язык$/i.test(s) && !/^wildberries/i.test(s),
+    );
+    const nameText = candidates[0] || "";
+
     let brand = "";
     let name = "";
-    const nameText = String(data.nameText || "").replace(/\s+/g, " ").trim();
     if (nameText.includes(" / ")) {
       const parts = nameText.split(" / ");
       brand = (parts.shift() || "").trim();
       name = parts.join(" / ").trim();
     } else {
       name = nameText;
+      brand = clean(data.badgesText).replace(/Оригинал\w*/gi, "").trim();
     }
     if (!name) {
-      name = String(data.title || "")
+      name = clean(data.title)
         .split(" купить за ")[0]
-        .replace(new RegExp(`\\s*${sku}\\s*$`), "")
+        .replace(/\s*\d{6,}\s*$/, "")
         .trim();
     }
     if (!name || !price) {
-      log(`parse failed ${sku}: price="${data.priceText}" name="${nameText}" title="${data.title}"`);
+      log(
+        `parse failed ${sku}: price="${data.priceText}" h2="${data.h2Text}" name="${data.nameText}" title="${data.title}"`,
+      );
       return null;
     }
-    return { name, brand, price, image: data.image };
+    return { name, brand, price, image: clean(data.ogImage) || clean(data.image) };
   } catch (e) {
     log(`fetch error ${sku}: ${e && e.stack ? e.stack : e}`);
     return null;
