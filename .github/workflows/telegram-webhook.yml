@@ -33,7 +33,7 @@ jobs:
           const https = require("https");
           const token = process.env.BOT_TOKEN;
           const action = process.env.ACTION || "info";
-          const secret = process.env.WEBHOOK_SECRET || "";
+          const secret = (process.env.WEBHOOK_SECRET || "").trim();
           const workerUrl = (process.env.WORKER_URL || "").trim();
           if (!token) { console.error("TELEGRAM_BOT_TOKEN secret is not set"); process.exit(1); }
 
@@ -42,6 +42,11 @@ jobs:
           if (action === "set") {
             if (!workerUrl) { console.error("url is required for action=set"); process.exit(1); }
             if (!secret) { console.error("TELEGRAM_WEBHOOK_SECRET secret is not set"); process.exit(1); }
+            if (!/^[A-Za-z0-9_-]{1,256}$/.test(secret)) {
+              console.error("TELEGRAM_WEBHOOK_SECRET: допустимы только A-Z, a-z, 0-9, _ и - (без пробелов и переносов строк)");
+              console.error("length=" + secret.length + ", invalid_chars=" + (secret.match(/[^A-Za-z0-9_-]/g) || []).length);
+              process.exit(1);
+            }
             methodName = "setWebhook";
             payload = JSON.stringify({ url: workerUrl, secret_token: secret, allowed_updates: ["message"] });
           } else if (action === "delete") {

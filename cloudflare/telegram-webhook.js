@@ -17,8 +17,9 @@ export default {
       return new Response("Method Not Allowed", { status: 405 });
     }
 
-    const secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token") || "";
-    if (!env.WEBHOOK_SECRET || secret !== env.WEBHOOK_SECRET) {
+    const secret = (request.headers.get("X-Telegram-Bot-Api-Secret-Token") || "").trim();
+    const expected = String(env.WEBHOOK_SECRET || "").trim();
+    if (!expected || secret !== expected) {
       return new Response("Forbidden", { status: 403 });
     }
 
