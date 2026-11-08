@@ -104,6 +104,16 @@ npx wrangler secret put TELEGRAM_BOT_TOKEN
 
 Токен бота уже лежит в секрете `TELEGRAM_BOT_TOKEN`.
 
+## ## Команды бота
+
+После деплоя Worker бот отвечает на:
+
+- `/status` — последние задачи `telegram-task` и их состояние (очередь / выполняется по данным GitHub / готово / ошибка).
+- `/status <N>` — состояние конкретного Issue, например `/status 8`.
+- `/help` — справка.
+
+Статус берётся из GitHub Issues/комментариев. Реальное исполнение делает локальный OpenCode watcher на ПК (обычно до ~5 минут после создания Issue, ПК должен быть включён).
+
 ## 5. Включение webhook
 
 1. GitHub → **Actions** → workflow **telegram-webhook** → **Run workflow**.
