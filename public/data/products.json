@@ -25,5 +25,17 @@
     "addedAt": 1794080011028,
     "lastCheckedAt": 1794142668517,
     "currentPrice": 322404
+  },
+  {
+    "id": "a4e11805-86d4-4e2c-804a-2d17ac8d3f79",
+    "sku": "2019475537",
+    "url": "https://www.wildberries.ru/catalog/2019475537/detail.aspx",
+    "name": "— название придёт после следующей проверки",
+    "brand": "",
+    "marketplace": "wb",
+    "image": "https://basket-16.wbbasket.ru/vol20194/part2019475/2019475537/images/c246x328/1.webp",
+    "thresholdPct": 10,
+    "notify": true,
+    "addedAt": 1794153434621
   }
 ]
