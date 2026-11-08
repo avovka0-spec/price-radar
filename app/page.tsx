@@ -274,8 +274,11 @@ export default function Page() {
         writeRepoJson(cfg, "public/data/products.json", next, `Удалён ${sku}`),
         writeRepoJson(cfg, "public/data/history.json", his, `История: удалён ${sku}`),
       ]).then(([a, b]) => {
-        if (a.status === "rejected" || b.status === "rejected") show("Удалено локально, но не удалось сохранить в GitHub — обновите и проверьте");
-        else show("Удалено");
+        const err = [a, b].find((r): r is PromiseRejectedResult => r.status === "rejected")?.reason;
+        if (err) {
+          const msg = err?.message ? String(err.message) : "ошибка записи";
+          show(`Не сохранено в GitHub: ${msg.slice(0, 140)}`);
+        } else show("Удалено");
       });
     }
   };
