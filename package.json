@@ -9,6 +9,7 @@
     "vapid": "node scripts/generate-vapid.mjs",
     "browser:login": "node scripts/priceradar-browser-login.mjs",
     "import": "node scripts/import.mjs",
+    "normalize:prices": "node scripts/normalize-prices.mjs",
     "import:wb:favorites": "node scripts/wb-import-favorites.mjs",
     "import:wb:orders": "node scripts/wb-import-orders.mjs",
     "import:wb:prices": "node scripts/wb-import-personal-prices.mjs"

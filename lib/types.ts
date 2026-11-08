@@ -4,9 +4,14 @@ export interface Product {
   url: string;
   name: string;
   brand: string;
-  marketplace?: "wb" | "ozon" | "ali";
+  marketplace?: "wb" | "ozon" | "ali" | "ym";
   image?: string;
-  currentPrice?: number; // ₽
+  /** Публичная/трекинговая цена (₽). В public/data хранить только её/нечувствительные данные. */
+  currentPrice?: number;
+  /** Персональная цена из ЛК. НЕ записывать в public/data/products.json; только локальные/приватные потоки. */
+  personalPrice?: number;
+  personalPriceCapturedAt?: number;
+  priceSource?: "public" | "personal" | "manual";
   lastPrice?: number;
   lastNotifyPrice?: number;
   lastCheckedAt?: number;

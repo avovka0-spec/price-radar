@@ -53,6 +53,8 @@ const ROUTES = {
     prices: "scripts/wb-import-personal-prices.mjs",
     "personal-prices": "scripts/wb-import-personal-prices.mjs",
     personal: "scripts/wb-import-personal-prices.mjs",
+    normalize: "scripts/normalize-prices.mjs",
+    norm: "scripts/normalize-prices.mjs",
   },
 };
 
@@ -64,7 +66,7 @@ function help(code = 0) {
     "  node scripts/import.mjs --marketplace <wb|ozon|ym|ali> --kind <favorites|orders|prices> [опции скрипта]",
     "",
     "Маркетплейсы:",
-    "  wb / wildberries      — реализовано: favorites, orders, prices",
+    "  wb / wildberries      — реализовано: favorites, orders, prices, normalize",
     "  ozon                  — планируется",
     "  ym / yandex-market    — планируется",
     "  ali / aliexpress      — планируется",
@@ -72,7 +74,8 @@ function help(code = 0) {
     "Примеры (WB):",
     "  node scripts/import.mjs -m wb -k favorites --headed --add-candidates",
     "  node scripts/import.mjs -m wb -k orders --headed --scrolls 12",
-    "  node scripts/import.mjs -m wb -k prices --from-favorites-latest",
+    "  node scripts/import.mjs -m wb -k prices --from-products --limit 20",
+    "  node scripts/import.mjs -m wb -k normalize",
     "",
     "Переменные: PRICERADAR_EDGE_PROFILE, PRICERADAR_BROWSER_HEADLESS (эксперимент).",
   ];
@@ -80,10 +83,9 @@ function help(code = 0) {
   process.exit(code);
 }
 
-if (!argv.length || argv.includes("--help") || argv.includes("-h")) help(0);
-
 const marketplaceRaw = (getArg(["--marketplace", "-m"]) || "").toLowerCase();
 const kindRaw = (getArg(["--kind", "-k"]) || "").toLowerCase();
+if (!argv.length || ((argv.includes("--help") || argv.includes("-h")) && (!marketplaceRaw || !kindRaw))) help(0);
 if (!marketplaceRaw || !kindRaw) {
   console.error("Нужны параметры --marketplace и --kind. См. --help.");
   help(1);
@@ -102,7 +104,11 @@ if (!route) {
   process.exit(1);
 }
 
-const forwarded = stripArgs(argv, ["--marketplace", "-m", "--kind", "-k"]);
+let forwarded = stripArgs(argv, ["--marketplace", "-m", "--kind", "-k"]);
+// normalize-prices.mjs принимает --marketplace; прокидываем его, если не указан явно
+if ((kindRaw === "normalize" || kindRaw === "norm") && !forwarded.some((a) => a === "--marketplace" || a.startsWith("--marketplace="))) {
+  forwarded = ["--marketplace", marketplace, ...forwarded];
+}
 const script = path.join(ROOT, route);
 console.log(`[import] ${marketplace}:${kindRaw} -> ${route}`);
 const child = spawn(process.execPath, [script, ...forwarded], {
