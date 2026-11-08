@@ -19,10 +19,10 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
+import { resolveEdgeProfile, edgeLaunchOptions } from "./lib/browser-profile.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_DIR = path.join(ROOT, ".local", "marketplaces", "wb");
-const PROFILE = path.join(ROOT, ".local", "edge-profile"); // общий профиль с check-prices-local
 const PRODUCTS = path.join(ROOT, "public", "data", "products.json");
 const args = process.argv.slice(2);
 if (args.includes("--help") || args.includes("-h")) {
@@ -123,19 +123,12 @@ async function extractFavorites(page) {
 
 async function main() {
   fs.mkdirSync(OUT_DIR, { recursive: true });
-  log("Запуск Edge (профиль: .local/edge-profile). Если WB попросит вход — войдите в открывшемся окне.");
+  const profile = resolveEdgeProfile();
+  log(`Запуск Edge (профиль: ${profile}). Если WB попросит вход — войдите в открывшемся окне.`);
 
-  const ctx = await chromium.launchPersistentContext(PROFILE, {
-    channel: "msedge",
-    headless: false,
-    locale: "ru-RU",
+  const ctx = await chromium.launchPersistentContext(profile, {
+    ...edgeLaunchOptions({ headed: HEADED, background: !HEADED }),
     userAgent: UA,
-    viewport: null,
-    args: [
-      "--disable-blink-features=AutomationControlled",
-      ...(HEADED ? ["--start-maximized"] : ["--start-minimized"]),
-    ],
-    ignoreDefaultArgs: ["--enable-automation"],
   });
 
   try {

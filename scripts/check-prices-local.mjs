@@ -16,7 +16,6 @@ import {
   writeFileSync,
   mkdirSync,
   appendFileSync,
-  existsSync,
   statSync,
   unlinkSync,
 } from "node:fs";
@@ -25,6 +24,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 import webPush from "web-push";
+import { resolveEdgeProfile, edgeLaunchOptions, loadDotEnv } from "./lib/browser-profile.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const DATA = path.join(ROOT, "public", "data");
@@ -32,7 +32,6 @@ const LOCAL = path.join(ROOT, ".local");
 const LOG_DIR = path.join(ROOT, "logs");
 const LOG = path.join(LOG_DIR, "check-prices.log");
 const LOCK = path.join(LOCAL, "check-prices.lock");
-const PROFILE = path.join(LOCAL, "edge-profile");
 const MAX_AGE = 180 * 24 * 3600 * 1000;
 const DAY = 24 * 3600 * 1000;
 const MINIMIZED = process.env.PRICE_RADAR_MINIMIZED !== "0";
@@ -48,24 +47,7 @@ function log(message) {
   } catch {}
 }
 
-function loadDotEnv() {
-  try {
-    const raw = readFileSync(path.join(ROOT, ".env"), "utf8");
-    for (const line of raw.split(/\r?\n/)) {
-      if (!line.trim() || /^\s*#/.test(line)) continue;
-      const m = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
-      if (!m) continue;
-      let value = m[2];
-      if (
-        (value.startsWith('"') && value.endsWith('"')) ||
-        (value.startsWith("'") && value.endsWith("'"))
-      ) {
-        value = value.slice(1, -1);
-      }
-      if (!process.env[m[1]]) process.env[m[1]] = value;
-    }
-  } catch {}
-}
+// loadDotEnv — из ./lib/browser-profile.mjs
 
 function git(args) {
   return execFileSync("git", args, {
@@ -223,17 +205,11 @@ async function sendPush(notes, removed, subs, vapidReady) {
       subs = JSON.parse(readFileSync(path.join(DATA, "push-subscriptions.json"), "utf8"));
     } catch {}
 
-    const ctx = await chromium.launchPersistentContext(PROFILE, {
-      channel: "msedge",
-      headless: false,
-      locale: "ru-RU",
+    const profile = resolveEdgeProfile();
+    log(`Профиль Edge: ${profile}`);
+    const ctx = await chromium.launchPersistentContext(profile, {
+      ...edgeLaunchOptions({ headed: !MINIMIZED, background: MINIMIZED }),
       userAgent: UA,
-      viewport: null,
-      args: [
-        "--disable-blink-features=AutomationControlled",
-        ...(MINIMIZED ? ["--start-minimized"] : ["--start-maximized"]),
-      ],
-      ignoreDefaultArgs: ["--enable-automation"],
     });
 
     const notifyQueue = [];

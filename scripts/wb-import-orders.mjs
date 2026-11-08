@@ -13,10 +13,10 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
+import { resolveEdgeProfile, edgeLaunchOptions } from "./lib/browser-profile.mjs";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_DIR = path.join(ROOT, ".local", "marketplaces", "wb");
-const PROFILE = path.join(ROOT, ".local", "edge-profile");
 const UA =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
@@ -104,10 +104,11 @@ async function main() {
   log(`Открываю заказы WB: ${START_URL}`);
   log("Если нужен вход — войдите в открывшемся Edge. Данные сохраняются только локально.");
 
-  const ctx = await chromium.launchPersistentContext(PROFILE, {
-    channel: "msedge", headless: false, locale: "ru-RU", userAgent: UA, viewport: null,
-    args: ["--disable-blink-features=AutomationControlled", ...(HEADED ? ["--start-maximized"] : ["--start-minimized"])],
-    ignoreDefaultArgs: ["--enable-automation"],
+  const profile = resolveEdgeProfile();
+  log(`Профиль Edge: ${profile}`);
+  const ctx = await chromium.launchPersistentContext(profile, {
+    ...edgeLaunchOptions({ headed: HEADED, background: !HEADED }),
+    userAgent: UA,
   });
 
   try {
