@@ -353,17 +353,5 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427
-  },
-  {
-    "id": "8c02a138-4cb1-418f-a53f-af2c7ca95818",
-    "sku": "ozon:3084410713",
-    "url": "https://www.ozon.ru/product/perchatki-termo-1-para-3084410713/",
-    "name": "Перчатки термо, 1 пара",
-    "brand": "",
-    "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-2/wc500/14195154098.jpg",
-    "thresholdPct": 10,
-    "notify": true,
-    "addedAt": 1794152869427
   }
 ]
