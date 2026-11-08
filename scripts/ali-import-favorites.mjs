@@ -11,9 +11,9 @@ const OUT_DIR = path.join(ROOT, ".local", "marketplaces", "ali");
 const PRODUCTS = path.join(ROOT, "public", "data", "products.json");
 const args = process.argv.slice(2);
 function has(n){return args.includes(n);} function getArg(n,d=null){const i=args.indexOf(n); if(i>=0&&args[i+1]&&!args[i+1].startsWith("-")) return args[i+1]; const eq=args.find(x=>x.startsWith(n+"=")); return eq?eq.slice(n.length+1):d;}
-if (has("--help")||has("-h")) { console.log(`Импорт избранного AliExpress (локально)\n  --url <url> (по умолчанию wishlist) --headed --add-candidates --scrolls N`); process.exit(0); }
+if (has("--help")||has("-h")) { console.log(`Импорт избранного AliExpress/aliexpress.ru (локально)\n  --url <url> (по умолчанию wishlist aliexpress.ru) --headed --add-candidates --scrolls N\n  Если ваш URL избранного отличается, обязательно укажите --url.`); process.exit(0); }
 const HEADED=has("--headed"), SHOW_CANDIDATES=has("--add-candidates"), SCROLLS=Math.max(0,Number(getArg("--scrolls","8"))||8);
-const START_URL=getArg("--url","https://www.aliexpress.com/p/wishlist/index.html");
+const START_URL=getArg("--url","https://aliexpress.ru/p/wishlist/index.html");
 const UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const ts=()=>new Date().toISOString().replace(/[:.]/g,"-"); const log=(m)=>console.log(`[${new Date().toISOString()}] ${m}`);
 const esc=(v)=>{const s=String(v??""); return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s;};
@@ -22,12 +22,12 @@ const parsePrice=(t)=>{ const s=String(t||"").replace(/\u00a0/g," ").replace(/,/
 async function extract(page){ return await page.evaluate(()=>{
   const norm=s=>String(s||"").replace(/\s+/g," ").trim();
   const junk=t=>/window\.__|__INITIAL_STATE__|webpackJsonp|baobab/i.test(String(t||""));
-  const productId=(href)=>{ const s=String(href||""); let m=s.match(/\/item\/(\d{6,})\.html/); if(m) return m[1]; m=s.match(/[?&](?:productId|product_id|id)=(\d{6,})/); if(m) return m[1]; m=s.match(/\/(\d{10,})(?:[/?#]|$)/); return m?m[1]:null; };
+  const productId=(href)=>{ const s=String(href||""); let m=s.match(/\/item\/(\d{6,})\.html/); if(m) return m[1]; m=s.match(/\/product\/(\d{6,})\.html/); if(m) return m[1]; m=s.match(/[?&](?:productId|product_id|sku_id|id)=(\d{6,})/); if(m) return m[1]; m=s.match(/\/(\d{10,})(?:[/?#]|$)/); return m?m[1]:null; };
   const visibleText=el=>{ try{ if(el?.innerText) return norm(el.innerText);}catch{} const c=el?.cloneNode?.(true); c?.querySelectorAll?.('script,style,noscript').forEach(n=>n.remove()); return norm(c?.innerText||c?.textContent||""); };
   const nameFromSlug=href=>{ const m=String(href||"").match(/\/item\/([^/]+)\.html/); if(!m) return ""; try{return decodeURIComponent(m[1]).replace(/[-_]+/g," ").trim();}catch{return m[1].replace(/[-_]+/g," ");} };
   const isGoodName=t=>{ const s=norm(t); return s.length>=8&&s.length<=320&&!junk(s)&&/[A-Za-zА-Яа-я\u4e00-\u9fff]{3,}/.test(s)&&!/^\d[\d\s.,]*\s*(₽|руб|RUB|US \$|\$)?$/i.test(s); };
   const items=[]; const seen=new Set();
-  const anchors=Array.from(document.querySelectorAll('a[href*="/item/"],a[href*="productId="],a[href*="aliexpress.com/item"]'));
+  const anchors=Array.from(document.querySelectorAll('a[href*="/item/"],a[href*="/product/"],a[href*="productId="],a[href*="product_id="],a[href*="aliexpress.ru/item"],a[href*="aliexpress.com/item"]'));
   let junkSkipped=0;
   for(const a of anchors){
     const href=a.href||""; const id=productId(href); if(!id||seen.has(id)) continue;

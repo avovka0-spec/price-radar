@@ -10,9 +10,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_DIR = path.join(ROOT, ".local", "marketplaces", "ali");
 const args = process.argv.slice(2);
 function has(n){return args.includes(n);} function getArg(n,d=null){const i=args.indexOf(n); if(i>=0&&args[i+1]&&!args[i+1].startsWith("-")) return args[i+1]; const eq=args.find(x=>x.startsWith(n+"=")); return eq?eq.slice(n.length+1):d;}
-if (has("--help")||has("-h")) { console.log(`Импорт заказов AliExpress (локально)\n  --url <url> (по умолчанию /p/order/index.html) --headed --scrolls N --wait-ms N`); process.exit(0); }
+if (has("--help")||has("-h")) { console.log(`Импорт заказов AliExpress/aliexpress.ru (локально)\n  --url <url> (по умолчанию aliexpress.ru orders) --headed --scrolls N --wait-ms N\n  Если URL заказов отличается, укажите --url.`); process.exit(0); }
 const HEADED=has("--headed"), SCROLLS=Math.max(0,Number(getArg("--scrolls","8"))||8), WAIT=Math.max(500,Number(getArg("--wait-ms","3500"))||3500);
-const START_URL=getArg("--url","https://www.aliexpress.com/p/order/index.html");
+const START_URL=getArg("--url","https://aliexpress.ru/p/order/index.html");
 const UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const ts=()=>new Date().toISOString().replace(/[:.]/g,"-"); const log=(m)=>console.log(`[${new Date().toISOString()}] ${m}`);
 const esc=(v)=>{const s=String(v??""); return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s;};
@@ -24,8 +24,8 @@ async function extract(page){ return await page.evaluate(()=>{ const norm=s=>Str
     const t=norm(el.textContent); if(t.length<30||t.length>5000) continue;
     if(!/order|заказ|достав|shipped|delivered|paid|оплачен|₽|RUB|\$/i.test(t)) continue;
     if(el.querySelectorAll("section,article,li").length>15) continue;
-    const links=[...new Set(Array.from(el.querySelectorAll('a[href]')).map(a=>a.href).filter(h=>/\/item\/\d+\.html|productId=|\/order\//.test(h)))].slice(0,20);
-    const ids=[...new Set(links.map(h=>{let m=h.match(/\/item\/(\d{6,})\.html/); if(m) return m[1]; m=h.match(/[?&](?:productId|product_id)=(\d{6,})/); return m?m[1]:null;}).filter(Boolean))];
+    const links=[...new Set(Array.from(el.querySelectorAll('a[href]')).map(a=>a.href).filter(h=>/aliexpress\.(ru|com)|\/item\/\d+\.html|\/product\/\d+\.html|productId=|\/order\//.test(h)))].slice(0,20);
+    const ids=[...new Set(links.map(h=>{let m=h.match(/\/item\/(\d{6,})\.html/); if(m) return m[1]; m=h.match(/\/product\/(\d{6,})\.html/); if(m) return m[1]; m=h.match(/[?&](?:productId|product_id|sku_id)=(\d{6,})/); return m?m[1]:null;}).filter(Boolean))];
     const orderIds=(t.match(/\b\d{12,}\b/g)||[]).slice(0,5);
     const prices=(t.match(/(?:₽|руб|RUB)\s*\d[\d\s.,]*|\d[\d\s.,]*\s*(?:₽|руб|RUB)|US\s*\$\s*[\d.,]+|\$\s*[\d.,]+/gi)||[]).slice(0,12);
     if(!ids.length && !orderIds.length && !/order|заказ/i.test(t)) continue;

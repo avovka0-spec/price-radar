@@ -157,24 +157,22 @@ node scripts/import.mjs -m ym -k prices --urls "https://market.yandex.ru/product
 
 MVP использует эвристики `/product--.../<id>`, `/card/.../<id>`, цены в ₽; `debug.antibotHint/loginHint` помогут понять причину пустого результата. Для тюнинга пришлите обезличенный фрагмент `.local/marketplaces/ym/*-latest.json` (или `debug`).
 
-## AliExpress: импорт ЛК (MVP, best-effort)
+## AliExpress / aliexpress.ru: импорт ЛК (MVP, best-effort)
 
-AliExpress часто показывает капчу/антибот и меняет URL/разметку. Используйте профиль Edge ЦенРадара, **`--headed`**, при необходимости передайте точный `--url` вашего wishlist/заказов. Результаты — только в `.local/marketplaces/ali/` (gitignored).
+Для России используйте **aliexpress.ru** (вы уточнили). AliExpress часто показывает капчу/антибот и меняет URL/разметку, поэтому **обязательно указывайте `--url` вашего фактического раздела**, если дефолт не совпадает. Используйте профиль Edge ЦенРадара, `--headed`. Результаты — только в `.local/marketplaces/ali/` (gitignored).
 
 ```powershell
-# wishlist / избранное (URL может отличаться в вашем аккаунте)
+# wishlist / избранное (подставьте ВАШ URL из адресной строки после входа)
+node scripts/import.mjs -m ali -k favorites --headed --url "https://aliexpress.ru/<ваш-wishlist-путь>"
+# дефолтный URL скрипта (может не совпасть с вашим аккаунтом):
 node scripts/import.mjs -m ali -k favorites --headed
-node scripts/import.mjs -m ali -k favorites --headed --url "https://www.aliexpress.com/p/wishlist/index.html"
-npm run import:ali:favorites -- --headed
 
 # заказы
-node scripts/import.mjs -m ali -k orders --headed --scrolls 8
-npm run import:ali:orders -- --headed
+node scripts/import.mjs -m ali -k orders --headed --url "https://aliexpress.ru/<ваш-orders-путь>" --scrolls 8
 
-# персональные цены (в ₽, если Ali показывает RUB; иначе price может быть null)
+# персональные цены (в ₽, если страница показывает RUB)
 node scripts/import.mjs -m ali -k prices --from-favorites-latest --headed
-node scripts/import.mjs -m ali -k prices --urls "https://www.aliexpress.com/item/1234567890.html" --headed
-npm run import:ali:prices -- --from-favorites-latest --headed
+node scripts/import.mjs -m ali -k prices --urls "https://aliexpress.ru/item/1234567890.html" --headed
 ```
 
 Для тюнинга пришлите обезличенный фрагмент `.local/marketplaces/ali/*-latest.json` (`debug`, `sourceUrl`, 1–2 `items[]`/`orders[]`).

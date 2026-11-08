@@ -10,7 +10,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT_DIR = path.join(ROOT, ".local", "marketplaces", "ali");
 const args = process.argv.slice(2);
 function has(n){return args.includes(n);} function getArg(n,d=null){const i=args.indexOf(n); if(i>=0&&args[i+1]&&!args[i+1].startsWith("-")) return args[i+1]; const eq=args.find(x=>x.startsWith(n+"=")); return eq?eq.slice(n.length+1):d;}
-if (has("--help")||has("-h")) { console.log(`Персональные цены AliExpress (локально)\n  --from-products|--from-favorites-latest|--urls <u1,u2>|--skus ali:123\n  --limit N --headed --delay-ms N`); process.exit(0); }
+if (has("--help")||has("-h")) { console.log(`Персональные цены AliExpress/aliexpress.ru (локально)\n  --from-products|--from-favorites-latest|--urls <u1,u2>|--skus ali:123\n  --limit N --headed --delay-ms N`); process.exit(0); }
 const HEADED=has("--headed"), LIMIT=Math.max(1,Number(getArg("--limit","25"))||25), DELAY=Math.max(800,Number(getArg("--delay-ms","4500"))||4500);
 const UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const ts=()=>new Date().toISOString().replace(/[:.]/g,"-"); const log=(m)=>console.log(`[${new Date().toISOString()}] ${m}`);
@@ -18,7 +18,7 @@ const esc=(v)=>{const s=String(v??""); return /[",\n]/.test(s)?`"${s.replace(/"/
 const parsePrice=(t)=>{ const s=String(t||"").replace(/\u00a0/g," ").replace(/,/g,"."); const m=s.match(/(\d[\d\s]*[.,]?\d*)\s*(₽|руб|RUB)/i)||s.match(/(₽|руб|RUB)\s*(\d[\d\s]*[.,]?\d*)/i); if(!m) return null; const n=Number(String(m[1]||m[2]).replace(/[^\d.]/g,"")); return Number.isFinite(n)?Math.round(n):null; };
 
 function loadTargets(){
-  const urls=getArg("--urls"); if(urls) return urls.split(/[\s,]+/).filter(u=>/aliexpress\./i.test(u)).map(u=>({url:u}));
+  const urls=getArg("--urls"); if(urls) return urls.split(/[\s,]+/).filter(u=>/aliexpress\.(ru|com)/i.test(u)).map(u=>({url:u}));
   const skus=getArg("--skus"); if(skus) return skus.split(/[\s,]+/).map(s=>s.trim()).filter(Boolean).map(s=>({sku:s,url:null}));
   if(has("--from-favorites-latest")){ const j=JSON.parse(fs.readFileSync(path.join(OUT_DIR,"favorites-latest.json"),"utf8")); return (j.items||[]).map(it=>({sku:it.sku,url:it.url})); }
   if(has("--from-products")){ const j=JSON.parse(fs.readFileSync(path.join(ROOT,"public/data/products.json"),"utf8")); return (j||[]).filter(p=>p.marketplace==="ali").map(p=>({sku:p.sku,url:p.url})); }
@@ -42,7 +42,7 @@ async function extract(page){ return await page.evaluate(()=>{ const norm=s=>Str
     const page=ctx.pages()[0]||await ctx.newPage();
     for(let i=0;i<targets.length;i++){
       const t=targets[i]; let url=t.url;
-      if(!url && t.sku && /^ali:(\d+)$/.test(String(t.sku))) url=`https://www.aliexpress.com/item/${String(t.sku).replace(/^ali:/,"")}.html`;
+      if(!url && t.sku && /^ali:(\d+)$/.test(String(t.sku))) url=`https://aliexpress.ru/item/${String(t.sku).replace(/^ali:/,"")}.html`;
       if(!url){ items.push({marketplace:"ali",sku:t.sku,url:null,error:"no url"}); continue; }
       log(`[${i+1}/${targets.length}] ${url}`);
       await page.goto(url,{waitUntil:"domcontentloaded",timeout:60000}).catch(e=>log(`goto: ${e.message}`));

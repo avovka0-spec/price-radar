@@ -101,7 +101,7 @@ function help(code = 0) {
     "  wb / wildberries      — реализовано: favorites, orders, prices, normalize",
     "  ozon                  — MVP (best-effort): favorites, orders, prices, normalize",
     "  ym / yandex-market    — MVP (best-effort): favorites/wishlist, orders, prices, normalize",
-    "  ali / aliexpress      — MVP (best-effort): favorites/wishlist, orders, prices, normalize",
+    "  ali / aliexpress      — MVP (best-effort, aliexpress.ru): favorites/wishlist, orders, prices, normalize (часто нужен --url)",
     "",
     "Примеры:",
     "  node scripts/import.mjs -m ozon -k favorites --headed",
