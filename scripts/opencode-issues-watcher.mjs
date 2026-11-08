@@ -307,13 +307,50 @@ function runOpencode(cli, prompt, timeoutMs, logFile) {
   });
 }
 
-function tailFile(file, maxChars = 1200) {
-  try {
-    const s = fs.readFileSync(file, "utf8");
-    return s.length > maxChars ? "…" + s.slice(-maxChars) : s;
-  } catch {
-    return "";
+function readLog(file) {
+  try { return fs.readFileSync(file, "utf8"); } catch { return ""; }
+}
+
+function stripAnsi(s) {
+  return String(s || "").replace(/\x1b\[[0-9;?]*[ -/]*[@-~]/g, "").replace(/\r/g, "");
+}
+
+function tailText(s, maxChars = 1200) {
+  const t = String(s || "");
+  return t.length > maxChars ? "…" + t.slice(-maxChars) : t;
+}
+
+function chunkText(text, max = 28000) {
+  const s = String(text || "");
+  if (s.length <= max) return [s];
+  const parts = [];
+  let i = 0;
+  while (i < s.length) {
+    let end = Math.min(i + max, s.length);
+    if (end < s.length) {
+      const nl = s.lastIndexOf("\n", end);
+      if (nl > i + 1000) end = nl;
+    }
+    parts.push(s.slice(i, end));
+    i = end;
   }
+  return parts;
+}
+
+function buildReport(logFile, result) {
+  const raw = stripAnsi(readLog(logFile));
+  // Берём последний запуск, если лог дописывался
+  let body = raw;
+  if (raw.includes("opencode run ===")) {
+    const idx = raw.lastIndexOf("\n=== ");
+    if (idx >= 0) body = raw.slice(idx);
+  }
+  body = body.trim();
+  if (body.length > 180000) body = body.slice(0, 40000) + "\n\n…(середина отчёта обрезана)…\n\n" + body.slice(-120000);
+  const exitLine = result.killedByTimeout
+    ? `таймаут ${Math.round((Number(process.env.OPENCODE_ISSUES_TIMEOUT_MS || 1800000)) / 60000)} мин`
+    : `exit code ${result.code}`;
+  return { body, exitLine };
 }
 
 async function main() {
@@ -379,29 +416,40 @@ async function main() {
       const result = await runOpencode(cli, prompt, timeoutMs, logFile);
       const ok = result.code === 0 && !result.killedByTimeout;
 
+      const report = buildReport(logFile, result);
+      const tgSummary = tailText(report.body, 2200).replace(/```/g, "'''");
       if (ok) {
         state.issues[key] = { status: "done", at: nowIso(), attempt, title: issue.title || "" };
         writeState(state);
         await commentIssue(token, owner, repo, key,
           `✅ OpenCode завершил выполнение (попытка ${attempt}, exit 0).\nВремя: ${nowIso()}.`);
+        for (let i = 0; i < chunkText(report.body).length; i++) {
+          const part = chunkText(report.body)[i];
+          const label = chunkText(report.body).length > 1 ? ` (часть ${i + 1}/${chunkText(report.body).length})` : "";
+          await commentIssue(token, owner, repo, key,
+            `<details><summary>Полный отчёт OpenCode${label}</summary>\n\n\`\`\`text\n${part.replace(/```/g, "'''")}\n\`\`\`\n</details>`);
+        }
         try { await closeIssue(token, owner, repo, key); } catch (e) { log(String(e && e.message || e)); }
-        await notify(token, owner, repo, chatId, `✅ OpenCode выполнил Issue #${key}\n${issue.title || ""}\n${issue.html_url || ""}`);
+        await notify(token, owner, repo, chatId,
+          `✅ OpenCode выполнил Issue #${key}\n${issue.title || ""}\n${issue.html_url || ""}\n\nОтчёт (хвост):\n${tgSummary.slice(0, 2800)}`);
         log(`done #${key}`);
       } else {
-        const tail = tailFile(logFile).replace(/`/g, "'").slice(0, 900);
         state.issues[key] = {
           status: "failed", at: nowIso(), attempt, title: issue.title || "",
-          error: result.killedByTimeout ? "timeout" : `exit ${result.code}`,
+          error: report.exitLine,
         };
         writeState(state);
         await commentIssue(token, owner, repo, key,
-          `❌ OpenCode завершился с ошибкой (попытка ${attempt}).\n` +
-          `Причина: ${result.killedByTimeout ? `таймаут ${Math.round(timeoutMs/60000)} мин` : `exit code ${result.code}`}.\n` +
-          `Проверьте \`logs/opencode-issue-${key}.log\` на ПК.`);
+          `❌ OpenCode завершился с ошибкой (попытка ${attempt}).\nПричина: ${report.exitLine}.\nЛокальный лог: \`logs/opencode-issue-${key}.log\`.`);
+        for (let i = 0; i < chunkText(report.body).length; i++) {
+          const part = chunkText(report.body)[i];
+          const label = chunkText(report.body).length > 1 ? ` (часть ${i + 1}/${chunkText(report.body).length})` : "";
+          await commentIssue(token, owner, repo, key,
+            `<details><summary>Отчёт OpenCode (ошибка)${label}</summary>\n\n\`\`\`text\n${part.replace(/```/g, "'''")}\n\`\`\`\n</details>`);
+        }
         await notify(token, owner, repo, chatId,
-          `❌ OpenCode ошибка по Issue #${key} (попытка ${attempt})\n${issue.title || ""}\n` +
-          `${result.killedByTimeout ? "Таймаут" : `Exit ${result.code}`}. Лог: logs/opencode-issue-${key}.log`);
-        log(`failed #${key}: ${result.killedByTimeout ? "timeout" : result.code}\n${tail}`);
+          `❌ OpenCode ошибка по Issue #${key} (попытка ${attempt})\n${issue.title || ""}\n${report.exitLine}\n${issue.html_url || ""}\n\nОтчёт (хвост):\n${tgSummary.slice(0, 2800)}`);
+        log(`failed #${key}: ${report.exitLine}`);
       }
       // По одному Issue за запуск — чтобы не держать Task Scheduler долго и не путать логи.
       break;
