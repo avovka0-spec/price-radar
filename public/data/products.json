@@ -493,8 +493,8 @@
     "marketplace": "wb",
     "thresholdPct": 5,
     "notify": true,
-    "currentPrice": 1000,
+    "currentPrice": 800,
     "addedAt": 1794166371146,
-    "lastCheckedAt": null
+    "lastCheckedAt": 1794166518519
   }
 ]
