@@ -27,6 +27,68 @@ const parsePrice = (t) => { const m = String(t || "").replace(/\u00a0/g, " ").ma
 async function extract(page) {
   return await page.evaluate(() => {
     const norm = (s) => String(s || "").replace(/\s+/g, " ").trim();
+    const isBadge = (t) => {
+      const s = norm(t);
+      if (!s || s.length < 2) return true;
+      if (/^(Вау-цены|Распродажа|Новинка|Хит|Бестселлер|Ozon Карта|Premium)$/i.test(s)) return true;
+      if (/^\d+%\s*(до|дней)?/i.test(s) && s.length < 40) return true;
+      if (/^0%\s*до\s*\d+\s*дней/i.test(s)) return true;
+      if (/^−?\d+%$/.test(s)) return true;
+      if (/^\d[\d\s\u00a0]*\s*₽$/.test(s)) return true;
+      if (/^\d[\d\s\u00a0]*\s*ед\.?\s*осталось/i.test(s)) return true;
+      if (/^(Завтра|Сегодня|Послезавтра|\d+\s*(января|февраля|марта|апреля|мая|июня|июля|августа|сентября|октября|ноября|декабря))$/i.test(s)) return true;
+      if (/^\d[\d.,]*\s*\d[\d\s]*\s*отзыв/i.test(s)) return true;
+      return false;
+    };
+    const isTitle = (t) => {
+      const s = norm(t);
+      if (s.length < 12 || s.length > 260) return false;
+      if (isBadge(s)) return false;
+      if (/^\d[\d\s\u00a0]*\s*₽/.test(s)) return false;
+      if (/отзыв|достав|Завтра|Сегодня|осталось|ед\./i.test(s) && s.length < 45) return false;
+      // обычно название содержит буквы и не является чистым промо
+      if (!/[А-Яа-яA-Za-z]{4,}/.test(s)) return false;
+      return true;
+    };
+    const pickName = (card, anchor) => {
+      const candidates = [];
+      const push = (v) => { const s = norm(v); if (s) candidates.push(s); };
+      // 1) другие ссылки на тот же товар в карточке часто содержат название
+      for (const a of card.querySelectorAll('a[href*="/product/"]')) push(a.textContent), push(a.getAttribute("title"));
+      // 2) распространённые текстовые контейнеры
+      for (const el of card.querySelectorAll('span,div,a')) {
+        const s = norm(el.textContent);
+        if (isTitle(s)) candidates.push(s);
+      }
+      // 3) разбор rawText: убрать явные префиксы-промо/цены
+      const raw = norm(card.textContent);
+      let fromRaw = raw
+        .replace(/^(Вау-цены|Распродажа|Новинка|Хит)\s*/iu, "")
+        .replace(/^\d+%\s*до\s*\d+\s*дней\s*/iu, "")
+        .replace(/Распродажа\s*/giu, "")
+        .replace(/\d[\d\s\u00a0]*\s*₽[\s\S]*$/u, "") // от первой цены до конца — грубо, но часто оставляет бренд+название в начале? нет, цена обычно после промо
+        .trim();
+      // более точный путь: взять кусок перед ценой из полного текста
+      const beforePrice = norm(raw.split(/\d[\d\s\u00a0]*\s*₽/)[0] || "");
+      const beforePriceClean = beforePrice
+        .replace(/^(Вау-цены|Распродажа|Новинка|Хит)\s*/iu, "")
+        .replace(/^\d+%\s*до\s*\d+\s*дней\s*/iu, "")
+        .replace(/Распродажа\s*/giu, "")
+        .trim();
+      if (isTitle(beforePriceClean)) candidates.push(beforePriceClean);
+      // 4) после цены часто идёт "стар. цена/скидка/остаток/Бренд+Название рейтинг доставка" — попробуем вытащить
+      const afterPrice = raw.replace(/^[\s\S]*?\d[\d\s\u00a0]*\s*₽\s*(\d[\d\s\u00a0]*\s*₽\s*)?(−?\d+%\s*)?(\d[\d\s\u00a0]*\s*(ед\.?\s*осталось|и\s*\d+\s*₽)\s*)?/u, "").trim();
+      const afterPriceClean = norm(afterPrice.replace(/\d[\d.,]*\s*\d[\d\s]*\s*отзыв[\s\S]*$/iu, "").replace(/\s*(Завтра|Сегодня|Послезавтра)[\s\S]*$/iu, ""));
+      if (isTitle(afterPriceClean)) candidates.push(afterPriceClean);
+      // 5) fallback: anchor/title
+      push(anchor.getAttribute("title"));
+      push(anchor.textContent);
+      // выбрать лучший: самый длинный валидный, но не весь raw мусор
+      const uniq = [...new Set(candidates.map(norm).filter(isTitle))];
+      uniq.sort((a, b) => b.length - a.length);
+      return uniq[0] || norm(anchor.textContent) || norm(anchor.getAttribute("title")) || "";
+    };
+
     const items = [];
     const seen = new Set();
     const links = Array.from(document.querySelectorAll('a[href*="/product/"]'));
@@ -37,26 +99,32 @@ async function extract(page) {
       const id = m[1];
       if (seen.has(id)) continue;
       let card = a;
-      for (let i = 0; i < 8 && card.parentElement; i++) {
+      for (let i = 0; i < 9 && card.parentElement; i++) {
         card = card.parentElement;
         const t = norm(card.textContent);
-        if (/₽|c Ozon Картой|руб/i.test(t)) break;
+        if (/₽|c Ozon Картой|руб/i.test(t) && /отзыв|Завтра|Сегодня|\d{4,}/i.test(t)) break;
+        if (/₽/.test(t) && t.length < 900) break;
       }
-      const text = norm(card.textContent).slice(0, 700);
+      const text = norm(card.textContent).slice(0, 900);
       const img = card.querySelector("img");
       const price = (text.match(/(\d[\d\s\u00a0]*)\s*₽/) || ["", ""])[0];
-      const name = norm(a.textContent) || norm(a.getAttribute("title")) || norm(card.querySelector("[data-state] span, span")?.textContent);
+      const name = pickName(card, a);
       if (!name && !price) continue;
       items.push({
         marketplace: "ozon", sku: `ozon:${id}`, productId: id,
-        url: href.split("?")[0], name: name.slice(0, 220), priceText: price,
+        url: href.split("?")[0], name: name.slice(0, 260), priceText: price,
         image: img ? (img.currentSrc || img.src || "") : "", rawText: text,
       });
       seen.add(id);
     }
+    const bodyText = norm(document.body?.innerText || "");
     return {
       url: location.href, title: document.title, items,
-      debug: { links: links.length, extracted: items.length, loginHint: /войти|вход/i.test(norm(document.body?.innerText || "")) },
+      debug: {
+        links: links.length, extracted: items.length,
+        loginHint: /войти|вход/i.test(bodyText) && items.length === 0,
+        hasFavoritesMarkers: /избранн|товар/i.test(bodyText),
+      },
     };
   });
 }
