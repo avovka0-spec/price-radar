@@ -29,23 +29,58 @@ function productIdFromUrl(href){
 
 async function extract(page){ return await page.evaluate(()=>{
   const norm=s=>String(s||"").replace(/\s+/g," ").trim();
+  const junk=t=>/window\.apiary|apiaryMarkerPortal|apiarySleepingQueue|\{"widgets"|"widgets":\{|baobab/i.test(String(t||""));
+  const visibleText=el=>{ try{ const t=el?.innerText; if(t) return norm(t); }catch{} return norm(el?.textContent||""); };
   const productIdFromUrl=(href)=>{ const s=String(href||""); let m=s.match(/\/product--[^/]*\/(\d{5,})/); if(m) return m[1]; m=s.match(/\/card\/[^/]*\/(\d{5,})/); if(m) return m[1]; m=s.match(/[?&](?:productId|sku|id)=(\d{5,})/); if(m) return m[1]; m=s.match(/\/(\d{7,})(?:[/?#]|$)/); return m?m[1]:null; };
+  const nameFromSlug=(href)=>{ const m=String(href||"").match(/\/(?:product--|card\/)([^/?#]+)/); if(!m) return ""; try{ return decodeURIComponent(m[1]).replace(/[-_]+/g," ").replace(/\s+/g," ").trim(); }catch{return m[1].replace(/[-_]+/g," ");} };
+  const isGoodName=t=>{ const s=norm(t); return s.length>=8 && s.length<=300 && !junk(s) && /[А-Яа-яA-Za-z]{3,}/.test(s) && !/^\d[\d\s\u00a0]*\s*₽$/.test(s) && !/^(войти|вход|корзин|избранн)$/i.test(s); };
+  const pickName=(card,a,href)=>{
+    const cands=[];
+    const add=v=>{ const s=norm(v); if(isGoodName(s)) cands.push(s); };
+    add(a.getAttribute("title")); add(a.getAttribute("aria-label"));
+    add(card.querySelector('h1,h2,h3,h4,[data-auto*="title"],[data-zone-name*="title"]')?.innerText);
+    add(card.querySelector('img[alt]')?.getAttribute('alt'));
+    for(const el of Array.from(card.querySelectorAll('a[title],a span,span,div')).slice(0,120)){
+      const s=norm(el.getAttribute?.('title')||el.textContent);
+      if(isGoodName(s) && !/отзыв|достав|купить|в корзин|поделиться|сравнить/i.test(s)) cands.push(s);
+    }
+    add(nameFromSlug(href));
+    // предпочитаем среднюю длину (не обрывки, не огромные блоки)
+    cands.sort((x,y)=>Math.abs(x.length-70)-Math.abs(y.length-70));
+    return cands[0]||"";
+  };
+
   const items=[]; const seen=new Set();
-  const anchors=Array.from(document.querySelectorAll('a[href*="/product"],a[href*="/card/"],a[href*="productId="]'));
+  const anchors=Array.from(document.querySelectorAll('a[href*="/product--"],a[href*="/card/"],a[href*="productId="]'));
+  let junkSkipped=0;
   for(const a of anchors){
-    const href=a.href||""; const id=productIdFromUrl(href); if(!id||seen.has(id)) continue;
-    let card=a; for(let i=0;i<9&&card.parentElement;i++){ card=card.parentElement; const t=norm(card.textContent); if(/₽/.test(t) && t.length<1200) break; }
-    const text=norm(card.textContent).slice(0,900);
+    const href=a.href||a.getAttribute("href")||""; const id=productIdFromUrl(href); if(!id||seen.has(id)) continue;
+    let card=a;
+    for(let i=0;i<10&&card.parentElement;i++){
+      card=card.parentElement;
+      const t=visibleText(card);
+      if(!junk(t) && /₽/.test(t) && t.length>20 && t.length<1400) break;
+      if(!junk(t) && t.length>30 && t.length<900 && card.querySelector('img')) break;
+    }
+    let text=visibleText(card);
+    if(junk(text)){
+      // попытка взять поддерево без hydration-скриптов
+      const clone=card.cloneNode(true);
+      clone.querySelectorAll('script,style,noscript').forEach(n=>n.remove());
+      text=norm(clone.innerText||clone.textContent||"");
+    }
+    if(junk(text)){ junkSkipped++; seen.add(id); continue; }
+    text=text.slice(0,1000);
     const img=card.querySelector("img");
     const priceText=(text.match(/(\d[\d\s\u00a0]*)\s*₽/)||["",""])[0];
-    let name=norm(a.getAttribute("title"))||norm(a.textContent);
-    if(!/[А-Яа-яA-Za-z]{4,}/.test(name)||name.length<8){ const cand=Array.from(card.querySelectorAll('a,span,h3,h4')).map(e=>norm(e.textContent)).find(t=>t.length>12&&t.length<260&&/[А-Яа-яA-Za-z]{4,}/.test(t)&&!/^\d[\d\s\u00a0]*\s*₽$/.test(t)&&!/отзыв|достав|купить/i.test(t)); if(cand) name=cand; }
+    const name=pickName(card,a,href);
     if(!name && !priceText) continue;
-    items.push({marketplace:"ym",sku:`ym:${id}`,productId:id,url:href.split("?")[0],name:name.slice(0,260),priceText,image:img?(img.currentSrc||img.src||""):"",rawText:text});
+    const slug=nameFromSlug(href);
+    items.push({marketplace:"ym",sku:`ym:${id}`,productId:id,url:href.split("?")[0],name:name.slice(0,260),slug:slug!==name?slug.slice(0,180):undefined,priceText,image:img?(img.currentSrc||img.src||""):"",rawText:text});
     seen.add(id);
   }
   const body=norm(document.body?.innerText||"");
-  return {url:location.href,title:document.title,items,debug:{links:anchors.length,extracted:items.length,loginHint:/войти|вход/i.test(body)&&items.length===0,antibotHint:/smartcaptcha|робот|подтвердите/i.test(body)}};
+  return {url:location.href,title:document.title,items,debug:{links:anchors.length,extracted:items.length,junkSkipped,loginHint:/войти|вход в аккаунт/i.test(body)&&items.length===0,antibotHint:/smartcaptcha|я не робот|подтвердите, что вы не робот/i.test(body)||/smartcaptcha/i.test(document.documentElement.innerHTML)}};
 });}
 
 (async()=>{
