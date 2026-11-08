@@ -21,7 +21,8 @@
     "import:ym:prices": "node scripts/ym-import-personal-prices.mjs",
     "import:ali:favorites": "node scripts/ali-import-favorites.mjs",
     "import:ali:orders": "node scripts/ali-import-orders.mjs",
-    "import:ali:prices": "node scripts/ali-import-personal-prices.mjs"
+    "import:ali:prices": "node scripts/ali-import-personal-prices.mjs",
+    "add-to-tracking": "node scripts/add-to-tracking.mjs"
   },
   "dependencies": {
     "next": "^14.2.35",

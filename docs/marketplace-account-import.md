@@ -177,10 +177,36 @@ node scripts/import.mjs -m ali -k prices --urls "https://aliexpress.ru/item/1234
 
 Для тюнинга пришлите обезличенный фрагмент `.local/marketplaces/ali/*-latest.json` (`debug`, `sourceUrl`, 1–2 `items[]`/`orders[]`).
 
+## Безопасный локальный поток: импорт → выбор → добавить в трекинг
+
+Реализовано CLI `scripts/add-to-tracking.mjs` (через общий CLI: `-k add|tracking|select`). Работает **только локально**: читает `.local/marketplaces/<marketplace>/` и изменяет **только** `public/data/products.json` (список товаров для трекинга). **Не делает** `git commit/push`. **Не копирует** избранное/заказы/`rawText`/персональные цены ЛК.
+
+```powershell
+cd D:\Prog_dev\ai\price-radar
+
+# 1) Сначала импорт избранного (данные остаются в .local/)
+node scripts/import.mjs -m ozon -k favorites --headed --add-candidates
+
+# 2) Посмотреть кандидатов (dry-run, ничего не меняет)
+node scripts/import.mjs -m ozon -k add --dry-run
+npm run add-to-tracking -- -m ozon --dry-run
+
+# 3) Добавить выбранное в public/data/products.json
+node scripts/import.mjs -m ozon -k add --all --dry-run              # проверка
+node scripts/import.mjs -m ozon -k add --skus ozon:851822112,ozon:1147653759
+node scripts/import.mjs -m ozon -k add --indexes 1,2,5
+node scripts/import.mjs -m ozon -k add --pick                        # интерактивно
+# Опционально: --with-price — взять видимую цену из импорта как начальную currentPrice.
+```
+
+После добавления проверьте `git diff -- public/data/products.json`. В репозиторий попадут только поля трекинга (SKU/URL/название/маркетплейс/настройки), аналогично ручному добавлению в PWA. Историю цен и актуальную цену подтянет локальный агент/проверка цен (или ручной ввод в приложении).
+
+Поддерживаются `wb|ozon|ym|ali` (маркетплейс в products: `wb`/`ozon`/`ym`/`ali`; SKU для Ozon/ЯМ/Ali — префиксный формат, например `ozon:123`, совместимый с парсером ссылок).
+
 ## Следующие шаги (план)
 
-1. **Тюнинг по реальным прогонам** (вы уже вошли в профили): заново запустите ЯМ избранное после фикса `13ce659`, затем проверьте Ozon/ЯМ/Али избранное+заказы+цены; пришлите обезличенные `*-latest.json`/`debug` там, где `count: 0`, мусор в `name`, нет цен или `antibotHint/loginHint`.
-2. Интеграция с приложением: безопасный локальный поток «импорт → выбор → добавить в трекинг» (без публикации данных ЛК).
+1. **Тюнинг по реальным прогонам**: донастройка парсеров по обезличенным `*-latest.json`/`debug` (ЯМ избранное/заказы/цены после фиксов, AliExpress.ru заказы по URL архива, при необходимости Ozon).
+2. **Улучшение PWA-интеграции**: парсинг ссылок/метаданные Яндекс Маркета и AliExpress в веб-приложении (частично добавлено распознавание YM-ссылок), UX для товаров без авто-проверки цены, при необходимости локальный helper/UI (без бэкенда) поверх `add-to-tracking`.
 3. При необходимости: локальный отчёт/UI сравнения «публичная vs персональная» цена, без записи персональных цен в `public/data`.
 
 ## Если извлечение пустое

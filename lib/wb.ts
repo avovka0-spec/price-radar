@@ -30,7 +30,7 @@ export function parseOzonLink(url: string): { sku: string; url: string; name: st
   return null;
 }
 
-export type ParsedProduct = { sku: string; url: string; name: string; marketplace: "wb" | "ozon" | "ali" };
+export type ParsedProduct = { sku: string; url: string; name: string; marketplace: "wb" | "ozon" | "ali" | "ym" };
 
 export function parseAliExpressLink(url: string): { sku: string; url: string; name: string; marketplace: "ali" } | null {
   const s = url.trim();
@@ -45,6 +45,22 @@ export function parseAliExpressLink(url: string): { sku: string; url: string; na
   return null;
 }
 
+export function parseYandexMarketLink(url: string): ParsedProduct | null {
+  const s = url.trim();
+  // https://market.yandex.ru/product--slug/123456789 или /card/slug/123456789
+  let m = s.match(/market\.yandex\.[a-z]+\/(?:product--|card\/)([^/?#]+)\/(\d{5,})/i);
+  if (!m) m = s.match(/market\.yandex\.[a-z]+\/.*?[?&](?:productId|sku|id)=(\d{5,})/i);
+  if (!m) return null;
+  const id = m[2] || m[1];
+  if (!/^\d{5,}$/.test(id)) return null;
+  const slug = m[2] ? m[1] : "";
+  let name = "";
+  try { name = decodeURIComponent(slug).replace(/[-_]+/g, " ").replace(/\s+/g, " ").trim(); } catch { name = slug.replace(/[-_]+/g, " "); }
+  if (/^\d+$/.test(name)) name = "";
+  const cleanUrl = s.split("?")[0];
+  return { sku: `ym:${id}`, url: cleanUrl || s, name: name || "Товар Яндекс Маркета", marketplace: "ym" };
+}
+
 export function parseProductLink(url: string): ParsedProduct | null {
   const wb = parseWbLink(url);
   if (wb) return { sku: wb.sku, url: wb.url, name: "", marketplace: "wb" };
@@ -52,6 +68,8 @@ export function parseProductLink(url: string): ParsedProduct | null {
   if (oz) return oz;
   const al = parseAliExpressLink(url);
   if (al) return al;
+  const ym = parseYandexMarketLink(url);
+  if (ym) return ym;
   return null;
 }
 

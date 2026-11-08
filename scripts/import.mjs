@@ -55,6 +55,9 @@ const ROUTES = {
     personal: "scripts/wb-import-personal-prices.mjs",
     normalize: "scripts/normalize-prices.mjs",
     norm: "scripts/normalize-prices.mjs",
+    add: "scripts/add-to-tracking.mjs",
+    tracking: "scripts/add-to-tracking.mjs",
+    select: "scripts/add-to-tracking.mjs",
   },
   ozon: {
     favorites: "scripts/ozon-import-favorites.mjs",
@@ -65,6 +68,9 @@ const ROUTES = {
     personal: "scripts/ozon-import-personal-prices.mjs",
     normalize: "scripts/normalize-prices.mjs",
     norm: "scripts/normalize-prices.mjs",
+    add: "scripts/add-to-tracking.mjs",
+    tracking: "scripts/add-to-tracking.mjs",
+    select: "scripts/add-to-tracking.mjs",
   },
   ym: {
     favorites: "scripts/ym-import-favorites.mjs",
@@ -76,6 +82,9 @@ const ROUTES = {
     personal: "scripts/ym-import-personal-prices.mjs",
     normalize: "scripts/normalize-prices.mjs",
     norm: "scripts/normalize-prices.mjs",
+    add: "scripts/add-to-tracking.mjs",
+    tracking: "scripts/add-to-tracking.mjs",
+    select: "scripts/add-to-tracking.mjs",
   },
   ali: {
     favorites: "scripts/ali-import-favorites.mjs",
@@ -87,6 +96,9 @@ const ROUTES = {
     personal: "scripts/ali-import-personal-prices.mjs",
     normalize: "scripts/normalize-prices.mjs",
     norm: "scripts/normalize-prices.mjs",
+    add: "scripts/add-to-tracking.mjs",
+    tracking: "scripts/add-to-tracking.mjs",
+    select: "scripts/add-to-tracking.mjs",
   },
 };
 
@@ -98,17 +110,17 @@ function help(code = 0) {
     "  node scripts/import.mjs --marketplace <wb|ozon|ym|ali> --kind <favorites|orders|prices> [опции скрипта]",
     "",
     "Маркетплейсы:",
-    "  wb / wildberries      — реализовано: favorites, orders, prices, normalize",
-    "  ozon                  — MVP (best-effort): favorites, orders, prices, normalize",
-    "  ym / yandex-market    — MVP (best-effort): favorites/wishlist, orders, prices, normalize",
-    "  ali / aliexpress      — MVP (best-effort, aliexpress.ru): favorites/wishlist, orders, prices, normalize (часто нужен --url)",
+    "  wb / wildberries      — favorites, orders, prices, normalize, add",
+    "  ozon                  — MVP: favorites, orders, prices, normalize, add",
+    "  ym / yandex-market    — MVP: favorites/wishlist, orders, prices, normalize, add",
+    "  ali / aliexpress      — MVP (aliexpress.ru): favorites/wishlist, orders, prices, normalize, add (часто нужен --url)",
     "",
     "Примеры:",
-    "  node scripts/import.mjs -m ozon -k favorites --headed",
-    "  node scripts/import.mjs -m ym -k favorites --headed  (или --url .../my/wishlist)",
-    "  node scripts/import.mjs -m ali -k favorites --headed  (или --url <ваш wishlist>)",
-    "  node scripts/import.mjs -m ali -k orders --headed --scrolls 8",
-    "  node scripts/import.mjs -m ali -k prices --from-favorites-latest --headed",
+    "  node scripts/import.mjs -m ozon -k favorites --headed --add-candidates",
+    "  node scripts/import.mjs -m ozon -k add --dry-run          # выбор из .local → добавить в трекинг",
+    "  node scripts/import.mjs -m ym -k favorites --headed --url .../my/wishlist",
+    "  node scripts/import.mjs -m ali -k favorites --headed --url <ваш wishlist>",
+    "  node scripts/import.mjs -m ali -k orders --headed --scrolls 8 --url <ваш URL>",
     "  node scripts/import.mjs -m <wb|ozon|ym|ali> -k normalize",
     "",
     "Переменные: PRICERADAR_EDGE_PROFILE, PRICERADAR_BROWSER_HEADLESS (эксперимент).",
@@ -139,8 +151,9 @@ if (!route) {
 }
 
 let forwarded = stripArgs(argv, ["--marketplace", "-m", "--kind", "-k"]);
-// normalize-prices.mjs принимает --marketplace; прокидываем его, если не указан явно
-if ((kindRaw === "normalize" || kindRaw === "norm") && !forwarded.some((a) => a === "--marketplace" || a.startsWith("--marketplace="))) {
+// normalize/add-to-tracking принимают --marketplace; прокидываем, если не указан явно
+if ((kindRaw === "normalize" || kindRaw === "norm" || kindRaw === "add" || kindRaw === "tracking" || kindRaw === "select")
+  && !forwarded.some((a) => a === "--marketplace" || a.startsWith("--marketplace=") || a === "-m" || a.startsWith("-m="))) {
   forwarded = ["--marketplace", marketplace, ...forwarded];
 }
 const script = path.join(ROOT, route);

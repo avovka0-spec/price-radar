@@ -179,7 +179,7 @@ export default function Page() {
     if (!cfg && !demo) return setShowOnboard(true);
     const input = (overrideUrl ?? link).trim();
     const parsed = parseProductLink(input);
-    if (!parsed) return setAddErr("Не похоже на ссылку Ozon/Wildberries или артикул");
+    if (!parsed) return setAddErr("Не похоже на ссылку WB/Ozon/Яндекс Маркет/AliExpress или артикул");
     if (products.some((p) => p.sku === parsed.sku)) {
       if (!overrideUrl) setLink("");
       return show("Товар уже отслеживается");
@@ -194,8 +194,8 @@ export default function Page() {
       if (card) { name = card.name || name; brand = card.brand || brand; currentPrice = card.price; }
       image = wbImageUrl(parsed.sku);
     } else {
-      // Ozon: имя из slug URL; цену подтянем вручную/Actions'ом (антибот не пускает с CI)
-      if (!name) name = "Товар Ozon";
+      // Ozon/Яндекс Маркет/AliExpress: имя из ссылки/slug если есть; цену уточним вручную или локальным агентом
+      if (!name) name = parsed.marketplace === "ym" ? "Товар Яндекс Маркета" : parsed.marketplace === "ali" ? "Товар AliExpress" : "Товар Ozon";
     }
 
     const created: Product = {
@@ -359,7 +359,7 @@ export default function Page() {
       {addErr && <div className="err">{addErr}</div>}
 
       {products.length === 0 && (
-        <div className="empty">Пока пусто.<br />Вставьте ссылку на товар Wildberries выше.<br />Проверка цен — по расписанию GitHub Actions.</div>
+        <div className="empty">Пока пусто.<br />Вставьте ссылку на товар WB/Ozon/Яндекс Маркет/AliExpress выше.<br />Проверка цен — по расписанию GitHub Actions/локального агента.</div>
       )}
 
       {products.map((p) => {
@@ -469,7 +469,7 @@ export default function Page() {
               <button className="ghost" style={{ width: "100%" }} onClick={() => patch(dProduct.sku, { notify: !dProduct.notify })}>
                 {dProduct.notify ? "🔕 Отключить уведомления" : "🔔 Включить уведомления"}
               </button>
-              <a className="linkrow" href={dProduct.url} target="_blank" rel="noreferrer">Открыть на Wildberries ↗</a>
+              <a className="linkrow" href={dProduct.url} target="_blank" rel="noreferrer">Открыть на {dProduct.marketplace === "ym" ? "Яндекс Маркете" : dProduct.marketplace === "ozon" ? "Ozon" : dProduct.marketplace === "ali" ? "AliExpress" : "Wildberries"} ↗</a>
               <button className="danger" onClick={() => {
                 if (!armedDelete) { setArmedDelete(true); return; }
                 remove(dProduct.sku); setArmedDelete(false);
