@@ -1,11 +1,17 @@
-// Локальный воркер цен для домашнего ПК (Windows + Edge).
+// Локальный воркер цен/метаданных для домашнего ПК (Windows + Edge).
 //
-// Почему локально: WB отдаёт GitHub-раннерам 403, а headless-браузерам — 498.
-// Видимый Edge с домашнего IP проходит антибот, поэтому цены проверяет этот скрипт.
+// WB: headless/CI часто блокируются (403/498), поэтому проверка идёт через видимый
+// (или смещённый за экран) Edge с домашнего IP и профилем ЦенРадара.
+// Ozon/Яндекс Маркет/AliExpress (aliexpress.ru): best-effort через тот же профиль.
+// Антибот-ограничения: увеличенные задержки, троттлинг, пропуск при капче/ошибке.
 //
 // Запуск:
 //   node scripts/check-prices-local.mjs
 //   PRICE_RADAR_MINIMIZED=0 node scripts/check-prices-local.mjs   # показать окно
+//   node scripts/check-prices-local.mjs --only-marketplace wb
+//   node scripts/check-prices-local.mjs --skip-marketplace ozon,ym,ali --limit 20
+//   CHECK_MARKETPLACES=wb,ozon,ym,ali  (по умолчанию все поддерживаемые)
+//   CHECK_DELAY_MS=4500                 (задержка между товарами, для Ozon/ЯМ/Ali полезно больше)
 //
 // Push-уведомления отправляются, только если в .env заданы VAPID_*:
 //   VAPID_PUBLIC_KEY=...
@@ -47,7 +53,25 @@ function log(message) {
   } catch {}
 }
 
-// loadDotEnv — из ./lib/browser-profile.mjs
+loadDotEnv();
+const argv = process.argv.slice(2);
+const hasArg = (n) => argv.includes(n);
+const getArg = (n, d=null) => { const i=argv.indexOf(n); if(i>=0&&argv[i+1]&&!argv[i+1].startsWith("-")) return argv[i+1]; const eq=argv.find(x=>x.startsWith(n+"=")); return eq?eq.slice(n.length+1):d; };
+const SUPPORTED = new Set(["wb","ozon","ym","ali"]);
+function parseSet(v){ return new Set(String(v||"").split(/[\s,]+/).map(s=>s.trim().toLowerCase()).filter(Boolean)); }
+const onlyM = parseSet(getArg("--only-marketplace", process.env.CHECK_ONLY_MARKETPLACE || ""));
+const skipM = parseSet(getArg("--skip-marketplace", process.env.CHECK_SKIP_MARKETPLACE || ""));
+const envM = parseSet(process.env.CHECK_MARKETPLACES || "wb,ozon,ym,ali");
+const LIMIT = Math.max(0, Number(getArg("--limit", process.env.CHECK_LIMIT || "0")) || 0);
+const BASE_DELAY = Math.max(500, Number(getArg("--delay-ms", process.env.CHECK_DELAY_MS || "2500")) || 2500);
+function marketplaceAllowed(m){
+  const x=(m||"wb").toLowerCase();
+  if(!SUPPORTED.has(x)) return false;
+  if(onlyM.size) return onlyM.has(x);
+  if(skipM.has(x)) return false;
+  return envM.has(x);
+}
+function delayFor(m){ return m==="wb" ? Math.min(BASE_DELAY, 3500) : Math.max(BASE_DELAY, 4000); }
 
 function git(args) {
   return execFileSync("git", args, {
@@ -58,83 +82,116 @@ function git(args) {
 }
 
 function parsePrice(text) {
-  const m = String(text || "").match(/(\d[\d\s\u00a0]*)\s*₽/);
+  const m = String(text || "").replace(/\u00a0/g," ").match(/(\d[\d\s]*)\s*₽/);
   return m ? Number(m[1].replace(/[^\d]/g, "")) : 0;
 }
+function clean(s){ return String(s||"").replace(/\s+/g," ").trim(); }
 
-async function fetchCard(ctx, sku) {
+function productUrl(p){
+  if (p.url) return p.url;
+  const m = (p.marketplace || "wb").toLowerCase();
+  const id = String(p.sku || "").replace(/^(wb|ozon|ym|ali):/, "");
+  if (m === "wb") return `https://www.wildberries.ru/catalog/${id}/detail.aspx`;
+  if (m === "ozon") return `https://www.ozon.ru/product/${id}/`;
+  if (m === "ym") return `https://market.yandex.ru/product--${id}/${id}`;
+  if (m === "ali") return `https://aliexpress.ru/item/${id}.html`;
+  return null;
+}
+
+async function fetchWbPage(page, sku, url){
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+  } catch (e) {
+    log(`goto wb ${sku}: ${e && e.message ? e.message : e}`);
+  }
+  await page.waitForSelector('[class*="priceBlockPrice"]', { timeout: 30000 }).catch(() => null);
+  await page.waitForTimeout(2500);
+  const data = await page.evaluate(() => {
+    const priceEl = document.querySelector('[class*="priceBlockPrice"]');
+    const nameEl = document.querySelector('[class*="productNameContainer"]');
+    const h2 = document.querySelector("h2");
+    const badges = document.querySelector('[class*="productHeaderBadges"]');
+    const og = document.querySelector('meta[property="og:image"]');
+    const img = document.querySelector('img[src*="/vol"][src*="/images/"]') || document.querySelector('img[src*="/images/"]');
+    return {
+      priceText: priceEl ? priceEl.textContent : "",
+      nameText: nameEl ? nameEl.textContent : "",
+      h2Text: h2 ? h2.textContent : "",
+      badgesText: badges ? badges.textContent : "",
+      title: document.title,
+      ogImage: og ? og.getAttribute("content") || "" : "",
+      image: img ? img.currentSrc || img.src || "" : "",
+      body: (document.body?.innerText || "").slice(0, 4000),
+    };
+  });
+  let price = parsePrice(data.priceText);
+  if (!price) { const m = String(data.title).match(/купить за\s*([\d\s\u00a0]+)\s*₽/); if (m) price = parsePrice(m[1]); }
+  const candidates = [clean(data.h2Text), clean(data.nameText)].filter((s) => s.length > 10 && !/^язык$/i.test(s) && !/^wildberries/i.test(s));
+  const nameText = candidates[0] || "";
+  let brand = ""; let name = "";
+  if (nameText.includes(" / ")) { const parts = nameText.split(" / "); brand = (parts.shift() || "").trim(); name = parts.join(" / ").trim(); }
+  else { name = nameText; brand = clean(data.badgesText).replace(/Оригинал\w*/gi, "").trim(); }
+  if (!name) name = clean(data.title).split(" купить за ")[0].replace(/\s*\d{6,}\s*$/, "").trim();
+  const antibot = /доступ ограничен|подтвердите|robot|captcha|498/i.test(data.title + " " + data.body);
+  if (!price) log(`parse failed wb ${sku}: price="${data.priceText}" title="${data.title}" antibot=${antibot}`);
+  if (!name || !price) return null;
+  return { name, brand, price, image: clean(data.ogImage) || clean(data.image) };
+}
+
+async function fetchGenericPage(page, p, url, opts={}){
+  const m = (p.marketplace || "").toLowerCase();
+  try {
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+  } catch (e) {
+    log(`goto ${m} ${p.sku}: ${e && e.message ? e.message : e}`);
+  }
+  await page.waitForTimeout(opts.waitMs ?? 4500);
+  const ex = await page.evaluate(() => {
+    const norm = (s) => String(s || "").replace(/\s+/g, " ").trim();
+    const body = norm(document.body?.innerText || "").slice(0, 12000);
+    const title = document.title || "";
+    const ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute("content") || "";
+    const h1 = norm(document.querySelector("h1")?.textContent);
+    const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute("content") || "";
+    const img = document.querySelector('img[src*="ir.ozone"],img[src*="avatars.mds.yandex"],img[src*="alicdn"],img[src*="ae-pic"],img[src*="/images/"],main img,img') || null;
+    // кандидаты цен: короткие элементы с ₽ (чаще всего цена товара)
+    const priceEls = Array.from(document.querySelectorAll("span,div,strong,p"))
+      .map(e => norm(e.textContent)).filter(t => /^\d[\d\s\u00a0]*\s*₽$/.test(t)).slice(0, 30);
+    return { title, ogTitle, h1, ogImage, image: img ? (img.currentSrc || img.src || "") : "", priceEls, body, url: location.href };
+  });
+  const antibot = /captcha|smartcaptcha|робот|подтвердите|доступ ограничен|verify you are human|blocked|punish/i.test(ex.title + " " + ex.body) || /captcha|punish/i.test(ex.body);
+  const nums = ex.priceEls.map(parsePrice).filter(n => n > 0);
+  // эвристика: на карточке часто первая/минимальная видимая цена — текущая; берём разумную (не 0, не огромный выброс если есть несколько)
+  let price = 0;
+  if (nums.length === 1) price = nums[0];
+  else if (nums.length > 1) {
+    const sorted = [...nums].sort((a,b)=>a-b);
+    // часто: [текущая, старая] или [текущая, старая, ещё] — текущая обычно меньше зачёркнутой; берём min среди первых 3
+    price = Math.min(...sorted.slice(0, Math.min(3, sorted.length)));
+  }
+  let name = clean(ex.h1) || clean(ex.ogTitle) || clean(ex.title)
+    .replace(/\s*[|—-]\s*(OZON|Ozon|Яндекс Маркет|AliExpress|АлиЭкспресс).*$/i, "")
+    .replace(/\s*купить.*$/i, "")
+    .trim();
+  if (/^ozon|^яндекс маркет|^aliexpress|^алиэкспресс/i.test(name)) name = clean(ex.h1) || name;
+  if (antibot) log(`antibot/captcha hint ${m} ${p.sku}: title="${ex.title}"`);
+  if (!price || !name) log(`parse miss ${m} ${p.sku}: price=${price} prices=[${ex.priceEls.slice(0,5).join("|")}] name="${name.slice(0,80)}" antibot=${antibot}`);
+  if (!price) return null;
+  return { name: name || p.name || String(p.sku), brand: p.brand || "", price, image: clean(ex.ogImage) || clean(ex.image) || undefined, antibot };
+}
+
+async function fetchMarketCard(ctx, p){
+  const m = (p.marketplace || "wb").toLowerCase();
+  const url = productUrl(p);
+  if (!url) { log(`no url: ${p.sku}`); return null; }
   const page = await ctx.newPage();
   try {
-    try {
-      await page.goto(`https://www.wildberries.ru/catalog/${sku}/detail.aspx`, {
-        waitUntil: "domcontentloaded",
-        timeout: 60000,
-      });
-    } catch (e) {
-      // WB иногда отдаёт 498 на первый запрос, но страница всё равно рендерится.
-      log(`goto ${sku}: ${e && e.message ? e.message : e}`);
-    }
-    await page.waitForSelector('[class*="priceBlockPrice"]', { timeout: 30000 }).catch(() => null);
-    await page.waitForTimeout(2500);
-
-    const data = await page.evaluate(() => {
-      const priceEl = document.querySelector('[class*="priceBlockPrice"]');
-      const nameEl = document.querySelector('[class*="productNameContainer"]');
-      const h2 = document.querySelector("h2");
-      const badges = document.querySelector('[class*="productHeaderBadges"]');
-      const og = document.querySelector('meta[property="og:image"]');
-      const img =
-        document.querySelector('img[src*="/vol"][src*="/images/"]') ||
-        document.querySelector('img[src*="/images/"]');
-      return {
-        priceText: priceEl ? priceEl.textContent : "",
-        nameText: nameEl ? nameEl.textContent : "",
-        h2Text: h2 ? h2.textContent : "",
-        badgesText: badges ? badges.textContent : "",
-        title: document.title,
-        ogImage: og ? og.getAttribute("content") || "" : "",
-        image: img ? img.currentSrc || img.src || "" : "",
-        url: location.href,
-      };
-    });
-
-    let price = parsePrice(data.priceText);
-    if (!price) {
-      const m = String(data.title).match(/купить за\s*([\d\s\u00a0]+)\s*₽/);
-      if (m) price = parsePrice(m[1]);
-    }
-
-    const clean = (s) => String(s || "").replace(/\s+/g, " ").trim();
-    const candidates = [clean(data.h2Text), clean(data.nameText)].filter(
-      (s) => s.length > 10 && !/^язык$/i.test(s) && !/^wildberries/i.test(s),
-    );
-    const nameText = candidates[0] || "";
-
-    let brand = "";
-    let name = "";
-    if (nameText.includes(" / ")) {
-      const parts = nameText.split(" / ");
-      brand = (parts.shift() || "").trim();
-      name = parts.join(" / ").trim();
-    } else {
-      name = nameText;
-      brand = clean(data.badgesText).replace(/Оригинал\w*/gi, "").trim();
-    }
-    if (!name) {
-      name = clean(data.title)
-        .split(" купить за ")[0]
-        .replace(/\s*\d{6,}\s*$/, "")
-        .trim();
-    }
-    if (!name || !price) {
-      log(
-        `parse failed ${sku}: price="${data.priceText}" h2="${data.h2Text}" name="${data.nameText}" title="${data.title}"`,
-      );
-      return null;
-    }
-    return { name, brand, price, image: clean(data.ogImage) || clean(data.image) };
+    if (m === "wb") return await fetchWbPage(page, String(p.sku).replace(/^wb:/,""), url);
+    if (m === "ozon" || m === "ym" || m === "ali") return await fetchGenericPage(page, p, url, { waitMs: m === "ali" ? 5500 : 4500 });
+    log(`unsupported marketplace: ${m} ${p.sku}`);
+    return null;
   } catch (e) {
-    log(`fetch error ${sku}: ${e && e.stack ? e.stack : e}`);
+    log(`fetch error ${m} ${p.sku}: ${e && e.stack ? e.stack : e}`);
     return null;
   } finally {
     await page.close().catch(() => {});
@@ -216,11 +273,18 @@ async function sendPush(notes, removed, subs, vapidReady) {
     const deadSubs = [];
     let changed = false;
 
-    for (const p of products) {
-      const card = await fetchCard(ctx, p.sku);
+    const targets = products.filter(p => marketplaceAllowed((p.marketplace || "wb").toLowerCase()));
+    const runList = LIMIT > 0 ? targets.slice(0, LIMIT) : targets;
+    log(`Товаров всего: ${products.length}; к проверке: ${runList.length} (маркетплейсы: ${[...new Set(runList.map(p=>(p.marketplace||'wb').toLowerCase()))].join(',')||'-'}${LIMIT?`, limit=${LIMIT}`:''})`);
+
+    for (let i = 0; i < runList.length; i++) {
+      const p = runList[i];
+      const m = (p.marketplace || "wb").toLowerCase();
+      const card = await fetchMarketCard(ctx, p);
       p.lastCheckedAt = Date.now();
       if (!card) {
-        log(`no card: ${p.sku}`);
+        log(`no card: [${m}] ${p.sku}`);
+        if (i < runList.length - 1) await new Promise(r => setTimeout(r, Math.min(delayFor(m), 2500)));
         continue;
       }
 
@@ -281,7 +345,8 @@ async function sendPush(notes, removed, subs, vapidReady) {
         changed = true;
       }
 
-      log(`${p.sku}: ${card.price} ₽ — ${card.name}`);
+      log(`[${m}] ${p.sku}: ${card.price} ₽ — ${card.name}`);
+      if (i < runList.length - 1) await new Promise(r => setTimeout(r, delayFor(m)));
     }
 
     await ctx.close().catch(() => {});

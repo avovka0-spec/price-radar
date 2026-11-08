@@ -62,6 +62,7 @@ html, body {
 .mpbadge { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 5px; color: #fff; letter-spacing: .3px; }
 .mpbadge.wb { background: #7b2ff7; }
 .mpbadge.ozon { background: #005bff; }
+.mpbadge.ym { background: #7a3cff; }
 .mpbadge.ali { background: #ff6a00; }
 .prow { display: flex; align-items: baseline; gap: 8px; margin-top: 6px; }
 .pprice { font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }

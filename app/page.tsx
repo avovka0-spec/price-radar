@@ -394,6 +394,7 @@ export default function Page() {
                 <div className="pbrand">
                   {p.marketplace === "wb" && <span className="mpbadge wb">WB</span>}
                   {p.marketplace === "ozon" && <span className="mpbadge ozon">Ozon</span>}
+                  {p.marketplace === "ym" && <span className="mpbadge ym">ЯМ</span>}
                   {p.marketplace === "ali" && <span className="mpbadge ali">Ali</span>}
                   {p.brand}{s?.days ? ` · ${s.days} дн. наблюдений` : ""}
                 </div>
@@ -432,6 +433,7 @@ export default function Page() {
                 <span className="t">
                   {dProduct.marketplace === "wb" && <span className="mpbadge wb" style={{ marginRight: 6, verticalAlign: "middle" }}>WB</span>}
                   {dProduct.marketplace === "ozon" && <span className="mpbadge ozon" style={{ marginRight: 6, verticalAlign: "middle" }}>Ozon</span>}
+                  {dProduct.marketplace === "ym" && <span className="mpbadge ym" style={{ marginRight: 6, verticalAlign: "middle" }}>ЯМ</span>}
                   {dProduct.marketplace === "ali" && <span className="mpbadge ali" style={{ marginRight: 6, verticalAlign: "middle" }}>Ali</span>}
                   {dProduct.brand && <b>{dProduct.brand} · </b>}{dProduct.name}
                 </span>

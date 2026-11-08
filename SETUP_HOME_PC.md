@@ -186,12 +186,9 @@ npm run build && npx serve out   # статический превью
 
 ## 8. Важные нюансы
 
-- **WB** — открытый API `card.wb.ru`; GitHub-раннеры и headless-браузеры получают 403/498.
-  Цены обновляет **локальный агент на домашнем ПК** через видимый Edge:
-  [docs/local-agent.md](docs/local-agent.md). Расписание Actions `check-prices` отключено.
-  Альтернатива для сервера — RU-релей `WB_PROXY_URL` ([docs/wb-proxy.md](docs/wb-proxy.md)).
-- **Ozon / AliExpress** — нет открытого API; цены вводятся вручную (как в xmix.pro) или
-  через бэкенд с Playwright.
+- **WB / Ozon / Яндекс Маркет / AliExpress (aliexpress.ru)** — GitHub-раннеры и headless-браузеры часто блокируются (WB 403/498, остальные — антибот/капча). Цены и базовые метаданные обновляет **локальный агент на домашнем ПК** через Edge/Playwright (best-effort, с троттлингом и пропуском при капче): [docs/local-agent.md](docs/local-agent.md). Расписание Actions `check-prices` обычно отключено/ручное.
+  Альтернатива для WB на сервере — RU-релей `WB_PROXY_URL` ([docs/wb-proxy.md](docs/wb-proxy.md)).
+- **Ozon / Яндекс Маркет / AliExpress** — официального открытого API для потребительских цен нет; локальный агент делает best-effort парсинг карточек в залогиненном/обычном профиле Edge. При блокировке цену можно ввести/скорректировать вручную в PWA.
 - **История цен** копится с момента добавления товара (ретроспектива недоступна).
 - **Push на iPhone** работает только для PWA, установленной через «На экран Домой» (iOS 16.4+).
 - **Токен приложения** (fine-grained, Contents: Read/Write) хранится в localStorage телефона,
@@ -214,9 +211,7 @@ npm run build && npx serve out   # статический превью
   токен с **Contents: Read and write** и вставьте его в настройках приложения; там же есть
   кнопка «Проверить токен». Чтение публичного репозитория теперь работает и без токена.
 - **Цена и название не обновляются** — проверьте `logs/check-prices.log` локального агента.
-  Если там `parse failed`/`498`, запустите `PRICE_RADAR_MINIMIZED=0 node scripts/check-prices-local.mjs`
-  и пройдите капчу; если агент не запущен — настройте расписание по
-  [docs/local-agent.md](docs/local-agent.md).
+  Если там `parse failed`/`498`/`antibot`, запустите с видимым окном (`PRICE_RADAR_MINIMIZED=0`) или точечно: `node scripts/check-prices-local.mjs --only-marketplace <wb|ozon|ym|ali> --limit 1 --delay-ms 5000`, пройдите капчу в профиле ЦенРадара (`npm run browser:login`). Подробности: [docs/local-agent.md](docs/local-agent.md).
 - `git push` просит пароль — настройте Git Credential Manager и войдите под `avovka0-spec`.
 - Issues из Telegram не появляются: Actions → `telegram-webhook` → `action=info` (проверьте
   `last_error_message`), логи Worker в Cloudflare, совпадение `WEBHOOK_SECRET` и
