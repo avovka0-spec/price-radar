@@ -6,11 +6,12 @@
     "name": "Мини-ПК GMKtec EVO-X2 Next Gen AMD Ryzen AI Max+ LPDDR5X 128",
     "brand": "GMKtec",
     "image": "https://basket-48.wbbasket.ru/vol15457/part1545780/1545780372/images/big/1.webp?picsUpdate=0",
-    "thresholdPct": 10,
+    "thresholdPct": 3,
     "notify": true,
     "addedAt": 1793978460143,
     "lastCheckedAt": 1794166053209,
-    "currentPrice": 290144
+    "currentPrice": 290144,
+    "targetPrice": 280000
   },
   {
     "id": "e64b2f25-f835-4da6-af73-01860f4cce44",
@@ -20,11 +21,12 @@
     "brand": "Нет бренда",
     "marketplace": "wb",
     "image": "https://basket-50.wbbasket.ru/vol17042/part1704280/1704280114/images/big/1.webp?picsUpdate=0",
-    "thresholdPct": 10,
+    "thresholdPct": 3,
     "notify": true,
     "addedAt": 1794080011028,
     "lastCheckedAt": 1794164270030,
-    "currentPrice": 312731
+    "currentPrice": 312731,
+    "targetPrice": 300000
   },
   {
     "id": "a4e11805-86d4-4e2c-804a-2d17ac8d3f79",
