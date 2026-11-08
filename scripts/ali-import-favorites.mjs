@@ -29,27 +29,44 @@ async function extract(page){ return await page.evaluate(()=>{
   const isGoodName=t=>{ const s=norm(t); return s.length>=6&&s.length<=320&&!junk(s)&&/[A-Za-zА-Яа-я\u4e00-\u9fff]{3,}/.test(s)&&!/^\d[\d\s.,]*\s*(₽|руб|RUB|US \$|\$)?$/i.test(s); };
   const items=[]; const seen=new Set();
   const anchors=Array.from(document.querySelectorAll('a[href]'));
-  const aliAnchors=anchors.filter(a=>/aliexpress\.(ru|com)\/(?:item|product)|\/(?:item|product)\/\d+|[?&](?:productId|product_id|item_id)=\d+/i.test(a.href||a.getAttribute("href")||""));
+  const isProductHref=h=>/aliexpress\.(ru|com)\/(?:item|product)|\/(?:item|product)\/\d+|[?&](?:productId|product_id|item_id)=\d+/i.test(h||"");
+  const aliAnchors=anchors.filter(a=>isProductHref(a.href||a.getAttribute("href")||""));
+  const candidates=[...aliAnchors];
+  // иногда товарные ссылки/ID спрятаны в data-атрибутах/обёртках
+  for(const el of Array.from(document.querySelectorAll('[data-product-id],[data-item-id],[data-spm-anchor-id]')).slice(0,400)){
+    const hid=el.getAttribute('data-product-id')||el.getAttribute('data-item-id');
+    if(hid && /^\d{6,}$/.test(hid) && !seen.has(hid)){
+      const a=el.closest('a[href]')||el.querySelector('a[href]')||el;
+      candidates.push({href:a.href||`https://aliexpress.ru/item/${hid}.html`, _hid:hid, _el:el});
+    }
+  }
   let junkSkipped=0;
-  for(const a of aliAnchors){
-    const href=a.href||a.getAttribute("href")||""; const id=productId(href); if(!id||seen.has(id)) continue;
-    let card=a; for(let i=0;i<11&&card.parentElement;i++){ card=card.parentElement; const t=visibleText(card); if(!junk(t)&&/₽|руб|RUB|\$/.test(t)&&t.length<1600) break; if(!junk(t)&&t.length<1100&&card.querySelector('img')) break; }
-    const text=visibleText(card).slice(0,1100);
+  for(const a of candidates){
+    const href=a.href||a.getAttribute?.("href")||""; const id=String(a._hid||productId(href)||""); if(!id||seen.has(id)) continue;
+    let card=a._el || (a.closest ? a.closest('div,li,article') : null) || a;
+    for(let i=0;i<12&&card.parentElement;i++){
+      card=card.parentElement; const t=visibleText(card);
+      if(!junk(t)&&/₽|руб|RUB/.test(t)&&t.length<1800) break;
+      if(!junk(t)&&t.length<1200&&card.querySelector?.('img')) break;
+    }
+    const text=visibleText(card).slice(0,1200);
     if(junk(text)){ junkSkipped++; seen.add(id); continue; }
-    const img=card.querySelector("img");
+    const img=card.querySelector?.("img");
     const priceText=(text.match(/(\d[\d\s.,]*)\s*(?:₽|руб|RUB)/i)||text.match(/(?:₽|руб|RUB)\s*(\d[\d\s.,]*)/i)||text.match(/US\s*\$\s*[\d.,]+|\$\s*[\d.,]+/i)||["",""])[0];
-    let name=norm(a.getAttribute("title"))||norm(img?.getAttribute("alt"));
-    if(!isGoodName(name)){ const cand=Array.from(card.querySelectorAll('h1,h2,h3,a[title],[title],span,div')).map(e=>norm(e.getAttribute?.('title')||e.textContent)).find(isGoodName); name=cand||nameFromSlug(href)||""; }
+    let name=(a.getAttribute?.("title")&&norm(a.getAttribute("title")))||norm(img?.getAttribute?.("alt"));
+    if(!isGoodName(name)){ const cand=Array.from((card.querySelectorAll?card.querySelectorAll('h1,h2,h3,a[title],[title],span,div'):[])).map(e=>norm(e.getAttribute?.('title')||e.textContent)).find(isGoodName); name=cand||nameFromSlug(href)||""; }
     if(!name && !priceText) continue;
-    let url=href.split("?")[0].replace(/^\/\//,"https://");
+    let url=(href.split("?")[0]||`https://aliexpress.ru/item/${id}.html`).replace(/^\/\//,"https://");
     if(url.startsWith("/")) url="https://aliexpress.ru"+url;
     items.push({marketplace:"ali",sku:`ali:${id}`,productId:id,url,name:name.slice(0,320),priceText:priceText||"",image:img?(img.currentSrc||img.src||""):"",rawText:text});
     seen.add(id);
   }
   const body=norm(document.body?.innerText||"");
   const sampleHrefs=[...new Set(anchors.map(a=>a.href||"").filter(h=>h&&h.includes("aliexpress")))].slice(0,8).map(h=>h.split("?")[0].slice(0,140));
+  const productHrefSamples=[...new Set(aliAnchors.map(a=>(a.href||"").split("?")[0]))].slice(0,8);
+  const rubCount=Array.from(document.querySelectorAll('div,span')).filter(e=>/₽|руб/i.test(e.textContent||"")).length;
   return {url:location.href,title:document.title,items,debug:{
-    totalAnchors:anchors.length,aliAnchors:aliAnchors.length,extracted:items.length,junkSkipped,
+    totalAnchors:anchors.length,aliAnchors:aliAnchors.length,productHrefSamples,rubCount,candidates:candidates.length,extracted:items.length,junkSkipped,
     sampleHrefs,
     loginHint:(/войдите|авторизуйтесь|sign in|log in/i.test(body))&&items.length===0,
     antibotHint:/captcha|robot|verify|punish|blocked|slide to verify|подтвердите/i.test(body)||/captcha|punish/i.test(document.documentElement.innerHTML),
