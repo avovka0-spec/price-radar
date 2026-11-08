@@ -23,28 +23,37 @@ const parsePrice=(t)=>{ const s=String(t||"").replace(/\u00a0/g," ").replace(/,/
 async function extract(page){ return await page.evaluate(()=>{
   const norm=s=>String(s||"").replace(/\s+/g," ").trim();
   const junk=t=>/window\.__|__INITIAL_STATE__|webpackJsonp|baobab/i.test(String(t||""));
-  const productId=(href)=>{ const s=String(href||""); let m=s.match(/\/item\/(\d{6,})\.html/); if(m) return m[1]; m=s.match(/\/product\/(\d{6,})\.html/); if(m) return m[1]; m=s.match(/[?&](?:productId|product_id|sku_id|id)=(\d{6,})/); if(m) return m[1]; m=s.match(/\/(\d{10,})(?:[/?#]|$)/); return m?m[1]:null; };
+  const productId=(href)=>{ const s=String(href||""); let m=s.match(/\/item\/(\d{6,})(?:\.html)?/); if(m) return m[1]; m=s.match(/\/product\/(\d{6,})(?:\.html)?/); if(m) return m[1]; m=s.match(/[?&](?:productId|product_id|sku_id|item_id|id)=(\d{6,})/); if(m) return m[1]; m=s.match(/\/(\d{11,16})(?:[/?#]|$)/); return m?m[1]:null; };
   const visibleText=el=>{ try{ if(el?.innerText) return norm(el.innerText);}catch{} const c=el?.cloneNode?.(true); c?.querySelectorAll?.('script,style,noscript').forEach(n=>n.remove()); return norm(c?.innerText||c?.textContent||""); };
-  const nameFromSlug=href=>{ const m=String(href||"").match(/\/item\/([^/]+)\.html/); if(!m) return ""; try{return decodeURIComponent(m[1]).replace(/[-_]+/g," ").trim();}catch{return m[1].replace(/[-_]+/g," ");} };
-  const isGoodName=t=>{ const s=norm(t); return s.length>=8&&s.length<=320&&!junk(s)&&/[A-Za-zА-Яа-я\u4e00-\u9fff]{3,}/.test(s)&&!/^\d[\d\s.,]*\s*(₽|руб|RUB|US \$|\$)?$/i.test(s); };
+  const nameFromSlug=href=>{ const m=String(href||"").match(/\/(?:item|product)\/([^/]+?)(?:\.html)?(?:[?#]|$)/); if(!m) return ""; let s=m[1]; if(/^\d+$/.test(s)) return ""; try{s=decodeURIComponent(s);}catch{} return norm(s.replace(/[-_]+/g," ")); };
+  const isGoodName=t=>{ const s=norm(t); return s.length>=6&&s.length<=320&&!junk(s)&&/[A-Za-zА-Яа-я\u4e00-\u9fff]{3,}/.test(s)&&!/^\d[\d\s.,]*\s*(₽|руб|RUB|US \$|\$)?$/i.test(s); };
   const items=[]; const seen=new Set();
-  const anchors=Array.from(document.querySelectorAll('a[href*="/item/"],a[href*="/product/"],a[href*="productId="],a[href*="product_id="],a[href*="aliexpress.ru/item"],a[href*="aliexpress.com/item"]'));
+  const anchors=Array.from(document.querySelectorAll('a[href]'));
+  const aliAnchors=anchors.filter(a=>/aliexpress\.(ru|com)\/(?:item|product)|\/(?:item|product)\/\d+|[?&](?:productId|product_id|item_id)=\d+/i.test(a.href||a.getAttribute("href")||""));
   let junkSkipped=0;
-  for(const a of anchors){
-    const href=a.href||""; const id=productId(href); if(!id||seen.has(id)) continue;
-    let card=a; for(let i=0;i<10&&card.parentElement;i++){ card=card.parentElement; const t=visibleText(card); if(!junk(t)&&/₽|руб|RUB|\$/.test(t)&&t.length<1500) break; if(!junk(t)&&t.length<900&&card.querySelector('img')) break; }
-    const text=visibleText(card).slice(0,1000);
+  for(const a of aliAnchors){
+    const href=a.href||a.getAttribute("href")||""; const id=productId(href); if(!id||seen.has(id)) continue;
+    let card=a; for(let i=0;i<11&&card.parentElement;i++){ card=card.parentElement; const t=visibleText(card); if(!junk(t)&&/₽|руб|RUB|\$/.test(t)&&t.length<1600) break; if(!junk(t)&&t.length<1100&&card.querySelector('img')) break; }
+    const text=visibleText(card).slice(0,1100);
     if(junk(text)){ junkSkipped++; seen.add(id); continue; }
     const img=card.querySelector("img");
     const priceText=(text.match(/(\d[\d\s.,]*)\s*(?:₽|руб|RUB)/i)||text.match(/(?:₽|руб|RUB)\s*(\d[\d\s.,]*)/i)||text.match(/US\s*\$\s*[\d.,]+|\$\s*[\d.,]+/i)||["",""])[0];
     let name=norm(a.getAttribute("title"))||norm(img?.getAttribute("alt"));
     if(!isGoodName(name)){ const cand=Array.from(card.querySelectorAll('h1,h2,h3,a[title],[title],span,div')).map(e=>norm(e.getAttribute?.('title')||e.textContent)).find(isGoodName); name=cand||nameFromSlug(href)||""; }
     if(!name && !priceText) continue;
-    items.push({marketplace:"ali",sku:`ali:${id}`,productId:id,url:href.split("?")[0].replace(/^\/\//,"https://"),name:name.slice(0,320),priceText:priceText||"",image:img?(img.currentSrc||img.src||""):"",rawText:text});
+    let url=href.split("?")[0].replace(/^\/\//,"https://");
+    if(url.startsWith("/")) url="https://aliexpress.ru"+url;
+    items.push({marketplace:"ali",sku:`ali:${id}`,productId:id,url,name:name.slice(0,320),priceText:priceText||"",image:img?(img.currentSrc||img.src||""):"",rawText:text});
     seen.add(id);
   }
   const body=norm(document.body?.innerText||"");
-  return {url:location.href,title:document.title,items,debug:{links:anchors.length,extracted:items.length,junkSkipped,loginHint:/sign in|log in|войти|вход|регистрация/i.test(body)&&items.length===0,antibotHint:/captcha|robot|verify|punish|blocked|slide to verify/i.test(body)||/captcha|punish/i.test(document.documentElement.innerHTML)}};
+  const sampleHrefs=[...new Set(anchors.map(a=>a.href||"").filter(h=>h&&h.includes("aliexpress")))].slice(0,8).map(h=>h.split("?")[0].slice(0,140));
+  return {url:location.href,title:document.title,items,debug:{
+    totalAnchors:anchors.length,aliAnchors:aliAnchors.length,extracted:items.length,junkSkipped,
+    sampleHrefs,
+    loginHint:(/войдите|авторизуйтесь|sign in|log in/i.test(body))&&items.length===0,
+    antibotHint:/captcha|robot|verify|punish|blocked|slide to verify|подтвердите/i.test(body)||/captcha|punish/i.test(document.documentElement.innerHTML),
+  }};
 });}
 
 (async()=>{
