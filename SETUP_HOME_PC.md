@@ -144,6 +144,7 @@ price-radar/
 │   ├── check-prices.mjs    # воркер цен для Actions (ручной запуск)
 │   ├── check-prices-local.mjs  # локальный воркер цен на домашнем ПК
 │   ├── opencode-issues-watcher.mjs  # автоприём telegram-task Issues → OpenCode
+│   ├── wb-import-favorites.mjs # локальный импорт избранного WB (MVP, .local/)
 │   ├── wb-relay.mjs        # WB-прокси для запуска на RU VPS
 │   ├── telegram-to-issues.mjs  # опрос бота → Issues
 │   ├── notify-telegram.mjs # статусы/отчёты агента → Telegram
@@ -155,7 +156,8 @@ price-radar/
 │   ├── telegram-webhook.md # пошаговая настройка Cloudflare Worker
 │   ├── wb-proxy.md         # WB-прокси на RU VPS
 │   ├── local-agent.md      # локальный агент цен на домашнем ПК
-│   └── opencode-issues.md  # автоприём telegram-task Issues на ПК
+│   ├── opencode-issues.md  # автоприём telegram-task Issues на ПК
+│   └── marketplace-account-import.md # локальный импорт ЛК маркетплейсов (MVP)
 ├── .github/workflows/
 │   ├── check-prices.yml    # cron каждые 2 часа
 │   ├── deploy-pages.yml    # деплой на GitHub Pages

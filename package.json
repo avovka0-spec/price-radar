@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "icons": "node scripts/gen-icons.mjs",
-    "vapid": "node scripts/generate-vapid.mjs"
+    "vapid": "node scripts/generate-vapid.mjs",
+    "import:wb:favorites": "node scripts/wb-import-favorites.mjs"
   },
   "dependencies": {
     "next": "^14.2.35",
