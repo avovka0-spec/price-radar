@@ -143,6 +143,7 @@ price-radar/
 ├── scripts/
 │   ├── check-prices.mjs    # воркер цен для Actions (ручной запуск)
 │   ├── check-prices-local.mjs  # локальный воркер цен на домашнем ПК
+│   ├── opencode-issues-watcher.mjs  # автоприём telegram-task Issues → OpenCode
 │   ├── wb-relay.mjs        # WB-прокси для запуска на RU VPS
 │   ├── telegram-to-issues.mjs  # опрос бота → Issues
 │   ├── notify-telegram.mjs # статусы/отчёты агента → Telegram
@@ -153,7 +154,8 @@ price-radar/
 ├── docs/
 │   ├── telegram-webhook.md # пошаговая настройка Cloudflare Worker
 │   ├── wb-proxy.md         # WB-прокси на RU VPS
-│   └── local-agent.md      # локальный агент цен на домашнем ПК
+│   ├── local-agent.md      # локальный агент цен на домашнем ПК
+│   └── opencode-issues.md  # автоприём telegram-task Issues на ПК
 ├── .github/workflows/
 │   ├── check-prices.yml    # cron каждые 2 часа
 │   ├── deploy-pages.yml    # деплой на GitHub Pages
@@ -190,7 +192,9 @@ npm run build && npx serve out   # статический превью
 - **Push на iPhone** работает только для PWA, установленной через «На экран Домой» (iOS 16.4+).
 - **Токен приложения** (fine-grained, Contents: Read/Write) хранится в localStorage телефона,
   не в репозитории.
-- **Задачи из Telegram** идут через webhook Cloudflare Worker — мгновенно. Polling
+- **Задачи из Telegram** идут через webhook Cloudflare Worker — мгновенно. Локальный watcher
+  `OpenCodeTelegramIssues` (каждые 5 мин) автоматически запускает OpenCode по открытым
+  `telegram-task` Issues: [docs/opencode-issues.md](docs/opencode-issues.md). Polling
   `telegram-to-issues` оставлен как ручной откат; расписание отключено.
 - **`public/data/telegram-offset.json`** нужен только для polling. При работе через
   webhook дедупликация идёт по маркеру `telegram-update-id` в теле Issue.

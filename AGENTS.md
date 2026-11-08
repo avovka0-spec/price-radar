@@ -33,7 +33,15 @@ node scripts/notify-telegram.mjs "❌ Ошибка: <что не получил�
 
 ## Задачи из Telegram
 
-Workflow `telegram-to-issues` опрашивает бота и создаёт Issues с меткой `telegram-task`.
-Если просят «выполни задачи из Issues» — бери открытые Issues с этой меткой, начиная
-с самой старой. После выполнения закоммить изменения, запушь и отправь статус «готово»
-со ссылкой на Issue.
+Telegram → Cloudflare Worker создаёт Issues с меткой `telegram-task`.
+
+**Автоматический режим (домашний ПК):** `scripts/opencode-issues-watcher.mjs` по
+расписанию Windows Task Scheduler опрашивает открытые Issues с этой меткой, запускает
+`opencode-cli run --auto` для самой старой необработанной задачи, отправляет статусы
+в Telegram, комментирует и закрывает Issue после успеха. Состояние/дедупликация —
+`.local/opencode-issues.json`, логи — `logs/opencode-issue-<N>.log`. ПК должен быть
+включён и пользователь залогинен; модель можно задать `OPENCODE_ISSUES_MODEL`.
+
+**Ручной режим:** если просят «выполни задачи из Issues» — бери открытые Issues с меткой
+`telegram-task`, начиная с самой старой. После выполнения закоммить изменения, запушь
+и отправь статус «готово» со ссылкой на Issue.
