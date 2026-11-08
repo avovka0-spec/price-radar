@@ -33,21 +33,30 @@ async function extract(page){ return await page.evaluate(()=>{
   const visibleText=el=>{ try{ const t=el?.innerText; if(t) return norm(t); }catch{} return norm(el?.textContent||""); };
   const productIdFromUrl=(href)=>{ const s=String(href||""); let m=s.match(/\/product--[^/]*\/(\d{5,})/); if(m) return m[1]; m=s.match(/\/card\/[^/]*\/(\d{5,})/); if(m) return m[1]; m=s.match(/[?&](?:productId|sku|id)=(\d{5,})/); if(m) return m[1]; m=s.match(/\/(\d{7,})(?:[/?#]|$)/); return m?m[1]:null; };
   const nameFromSlug=(href)=>{ const m=String(href||"").match(/\/(?:product--|card\/)([^/?#]+)/); if(!m) return ""; try{ return decodeURIComponent(m[1]).replace(/[-_]+/g," ").replace(/\s+/g," ").trim(); }catch{return m[1].replace(/[-_]+/g," ");} };
-  const isGoodName=t=>{ const s=norm(t); return s.length>=8 && s.length<=300 && !junk(s) && /[А-Яа-яA-Za-z]{3,}/.test(s) && !/^\d[\d\s\u00a0]*\s*₽$/.test(s) && !/^(войти|вход|корзин|избранн)$/i.test(s); };
-  const pickName=(card,a,href)=>{
+  const badName=t=>/Рейтинг товара|Оценок[:\s(]|\d[\d.,]*\s*\(\d+\)\s*[·•]\s*\d+\s*купил|купили$|отзыв|достав|купить|в корзин|поделиться|сравнить|Цена с картой|Яндекс Пэй|Промокод|Финальная цена/i.test(String(t||""));
+  const isGoodName=t=>{ const s=norm(t); return s.length>=8 && s.length<=300 && !junk(s) && !badName(s) && /[А-Яа-яA-Za-z]{3,}/.test(s) && !/^\d[\d\s\u00a0]*\s*₽$/.test(s) && !/^(войти|вход|корзин|избранн)$/i.test(s); };
+  const cleanSlug=s=>norm(String(s||"").replace(/\b\d{6,}\b/g," ")).slice(0,220);
+  const nameFromRaw=raw=>{
+    let t=norm(raw);
+    t=t.replace(/^\d+\s*%\s*(ПРОМОКОД|скидк[аи])\s*/iu,"").replace(/^(ПРОМОКОД|Распродажа|Хит)\s*/iu,"").trim();
+    const cut=t.search(/Цена с картой|Яндекс Пэй|\bПэй\b|\d[\d\s\u00a0]*\s*₽|Рейтинг товара|Оценок|купили|доставк|Из-за рубежа/i);
+    if(cut>8) t=t.slice(0,cut).trim();
+    return isGoodName(t)?t:"";
+  };
+  const pickName=(card,a,href,rawText)=>{
     const cands=[];
-    const add=v=>{ const s=norm(v); if(isGoodName(s)) cands.push(s); };
-    add(a.getAttribute("title")); add(a.getAttribute("aria-label"));
-    add(card.querySelector('h1,h2,h3,h4,[data-auto*="title"],[data-zone-name*="title"]')?.innerText);
-    add(card.querySelector('img[alt]')?.getAttribute('alt'));
-    for(const el of Array.from(card.querySelectorAll('a[title],a span,span,div')).slice(0,120)){
+    const add=(v,score=0)=>{ const s=norm(v); if(isGoodName(s)) cands.push({s,score}); };
+    add(card.querySelector('h1,h2,h3,h4,[data-auto*="title"],[data-zone-name*="title"]')?.innerText,5);
+    add(a.getAttribute("title"),4); add(a.getAttribute("aria-label"),3);
+    add(card.querySelector('img[alt]')?.getAttribute('alt'),2);
+    for(const el of Array.from(card.querySelectorAll('a[title],a span,span,div')).slice(0,140)){
       const s=norm(el.getAttribute?.('title')||el.textContent);
-      if(isGoodName(s) && !/отзыв|достав|купить|в корзин|поделиться|сравнить/i.test(s)) cands.push(s);
+      if(isGoodName(s)) cands.push({s,score:s.length>20&&s.length<140?2:1});
     }
-    add(nameFromSlug(href));
-    // предпочитаем среднюю длину (не обрывки, не огромные блоки)
-    cands.sort((x,y)=>Math.abs(x.length-70)-Math.abs(y.length-70));
-    return cands[0]||"";
+    const fromRaw=nameFromRaw(rawText); if(fromRaw) cands.push({s:fromRaw,score:6});
+    const slug=cleanSlug(nameFromSlug(href)); if(isGoodName(slug)) cands.push({s:slug,score:1});
+    cands.sort((x,y)=> (y.score-x.score) || (Math.abs(x.s.length-75)-Math.abs(y.s.length-75)));
+    return cands[0]?.s||"";
   };
 
   const items=[]; const seen=new Set();
@@ -73,10 +82,10 @@ async function extract(page){ return await page.evaluate(()=>{
     text=text.slice(0,1000);
     const img=card.querySelector("img");
     const priceText=(text.match(/(\d[\d\s\u00a0]*)\s*₽/)||["",""])[0];
-    const name=pickName(card,a,href);
+    const name=pickName(card,a,href,text);
     if(!name && !priceText) continue;
     const slug=nameFromSlug(href);
-    items.push({marketplace:"ym",sku:`ym:${id}`,productId:id,url:href.split("?")[0],name:name.slice(0,260),slug:slug!==name?slug.slice(0,180):undefined,priceText,image:img?(img.currentSrc||img.src||""):"",rawText:text});
+    items.push({marketplace:"ym",sku:`ym:${id}`,productId:id,url:href.split("?")[0],name:name.slice(0,260),slug:slug&&slug!==name?slug.slice(0,180):undefined,priceText,image:img?(img.currentSrc||img.src||""):"",rawText:text});
     seen.add(id);
   }
   const body=norm(document.body?.innerText||"");
