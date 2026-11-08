@@ -22,7 +22,9 @@
     "import:ali:favorites": "node scripts/ali-import-favorites.mjs",
     "import:ali:orders": "node scripts/ali-import-orders.mjs",
     "import:ali:prices": "node scripts/ali-import-personal-prices.mjs",
-    "add-to-tracking": "node scripts/add-to-tracking.mjs"
+    "add-to-tracking": "node scripts/add-to-tracking.mjs",
+    "import:ui": "node scripts/import-ui.mjs",
+    "ui": "node scripts/import-ui.mjs --open"
   },
   "dependencies": {
     "next": "^14.2.35",

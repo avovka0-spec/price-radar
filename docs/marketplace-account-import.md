@@ -179,19 +179,27 @@ node scripts/import.mjs -m ali -k prices --urls "https://aliexpress.ru/item/1234
 
 ## Безопасный локальный поток: импорт → выбор → добавить в трекинг
 
-Реализовано CLI `scripts/add-to-tracking.mjs` (через общий CLI: `-k add|tracking|select`). Работает **только локально**: читает `.local/marketplaces/<marketplace>/` и изменяет **только** `public/data/products.json` (список товаров для трекинга). **Не делает** `git commit/push`. **Не копирует** избранное/заказы/`rawText`/персональные цены ЛК.
+Есть **локальный UI** (удобно) и CLI. Оба работают **только локально**: читают `.local/marketplaces/<marketplace>/` и изменяют **только** `public/data/products.json` (список товаров для трекинга). **Не делают** `git commit/push`. **Не копируют** избранное/заказы/`rawText`/персональные цены ЛК.
 
+### Локальный UI (рекомендуется)
 ```powershell
 cd D:\Prog_dev\ai\price-radar
+npm run ui
+# или: node scripts/import-ui.mjs --open
+# или: node scripts/import.mjs -m ozon -k ui --open
+# порт: --port 3847 (по умолчанию)
+```
+Открывает страницу на `http://127.0.0.1:3847/` (только localhost). Выберите маркетплейс/источник, загрузите кандидатов (те, кого ещё нет в `products.json`), отметьте нужные и нажмите «Добавить выбранные в трекинг». Опция «взять цену из импорта как начальную» выключена по умолчанию.
 
+### CLI
+```powershell
 # 1) Сначала импорт избранного (данные остаются в .local/)
 node scripts/import.mjs -m ozon -k favorites --headed --add-candidates
 
 # 2) Посмотреть кандидатов (dry-run, ничего не меняет)
 node scripts/import.mjs -m ozon -k add --dry-run
-npm run add-to-tracking -- -m ozon --dry-run
 
-# 3) Добавить выбранное в public/data/products.json
+# 3) Добавить выбранное
 node scripts/import.mjs -m ozon -k add --all --dry-run              # проверка
 node scripts/import.mjs -m ozon -k add --skus ozon:851822112,ozon:1147653759
 node scripts/import.mjs -m ozon -k add --indexes 1,2,5

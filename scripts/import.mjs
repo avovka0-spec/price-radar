@@ -58,6 +58,7 @@ const ROUTES = {
     add: "scripts/add-to-tracking.mjs",
     tracking: "scripts/add-to-tracking.mjs",
     select: "scripts/add-to-tracking.mjs",
+    ui: "scripts/import-ui.mjs",
   },
   ozon: {
     favorites: "scripts/ozon-import-favorites.mjs",
@@ -71,6 +72,7 @@ const ROUTES = {
     add: "scripts/add-to-tracking.mjs",
     tracking: "scripts/add-to-tracking.mjs",
     select: "scripts/add-to-tracking.mjs",
+    ui: "scripts/import-ui.mjs",
   },
   ym: {
     favorites: "scripts/ym-import-favorites.mjs",
@@ -85,6 +87,7 @@ const ROUTES = {
     add: "scripts/add-to-tracking.mjs",
     tracking: "scripts/add-to-tracking.mjs",
     select: "scripts/add-to-tracking.mjs",
+    ui: "scripts/import-ui.mjs",
   },
   ali: {
     favorites: "scripts/ali-import-favorites.mjs",
@@ -99,6 +102,7 @@ const ROUTES = {
     add: "scripts/add-to-tracking.mjs",
     tracking: "scripts/add-to-tracking.mjs",
     select: "scripts/add-to-tracking.mjs",
+    ui: "scripts/import-ui.mjs",
   },
 };
 
@@ -107,7 +111,7 @@ function help(code = 0) {
     "Общий CLI импорта (локально, данные ЛК в .local/marketplaces/)",
     "",
     "Использование:",
-    "  node scripts/import.mjs --marketplace <wb|ozon|ym|ali> --kind <favorites|orders|prices> [опции скрипта]",
+    "  node scripts/import.mjs --marketplace <wb|ozon|ym|ali> --kind <favorites|orders|prices|normalize|add|ui> [опции]",
     "",
     "Маркетплейсы:",
     "  wb / wildberries      — favorites, orders, prices, normalize, add",
@@ -117,10 +121,10 @@ function help(code = 0) {
     "",
     "Примеры:",
     "  node scripts/import.mjs -m ozon -k favorites --headed --add-candidates",
-    "  node scripts/import.mjs -m ozon -k add --dry-run          # выбор из .local → добавить в трекинг",
+    "  node scripts/import.mjs -m ozon -k add --dry-run          # CLI: выбор из .local → добавить в трекинг",
+    "  node scripts/import.mjs -m ozon -k ui --open              # локальный UI (127.0.0.1) для выбора/добавления",
     "  node scripts/import.mjs -m ym -k favorites --headed --url .../my/wishlist",
     "  node scripts/import.mjs -m ali -k favorites --headed --url <ваш wishlist>",
-    "  node scripts/import.mjs -m ali -k orders --headed --scrolls 8 --url <ваш URL>",
     "  node scripts/import.mjs -m <wb|ozon|ym|ali> -k normalize",
     "",
     "Переменные: PRICERADAR_EDGE_PROFILE, PRICERADAR_BROWSER_HEADLESS (эксперимент).",
