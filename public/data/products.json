@@ -3,39 +3,41 @@
     "id": "5389494c-2261-4610-8197-471f28ffd6c6",
     "sku": "1545780372",
     "url": "https://www.wildberries.ru/catalog/1545780372/detail.aspx",
-    "name": "Мини-ПК EVO-X2 Next Gen AMD Ryzen AI Max+ LPDDR5X 128 GMKtec",
-    "brand": "",
+    "name": "Мини-ПК GMKtec EVO-X2 Next Gen AMD Ryzen AI Max+ LPDDR5X 128",
+    "brand": "GMKtec",
     "image": "https://basket-48.wbbasket.ru/vol15457/part1545780/1545780372/images/big/1.webp?picsUpdate=0",
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1793978460143,
-    "lastCheckedAt": 1794142664578,
-    "currentPrice": 299118
+    "lastCheckedAt": 1794157062942,
+    "currentPrice": 290144
   },
   {
     "id": "e64b2f25-f835-4da6-af73-01860f4cce44",
     "sku": "1704280114",
     "url": "https://www.wildberries.ru/catalog/1704280114/detail.aspx",
-    "name": "SZBOX Ryzen AI MAX 395 Мини-ПК Gaming 128 ГБ LPDDR5X 128GB Нет бренда",
-    "brand": "",
+    "name": "SZBOX Ryzen AI MAX 395 Мини-ПК Gaming 128 ГБ LPDDR5X 128GB",
+    "brand": "Нет бренда",
     "marketplace": "wb",
     "image": "https://basket-50.wbbasket.ru/vol17042/part1704280/1704280114/images/big/1.webp?picsUpdate=0",
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794080011028,
-    "lastCheckedAt": 1794142668517,
-    "currentPrice": 322404
+    "lastCheckedAt": 1794157069281,
+    "currentPrice": 312731
   },
   {
     "id": "a4e11805-86d4-4e2c-804a-2d17ac8d3f79",
     "sku": "2019475537",
     "url": "https://www.wildberries.ru/catalog/2019475537/detail.aspx",
-    "name": "— название придёт после следующей проверки",
+    "name": "Мини-ПК AMD Ryzen 7 8845HS Frost Silver 24G LPDDR5X 1TB, SER",
     "brand": "",
     "marketplace": "wb",
-    "image": "https://basket-16.wbbasket.ru/vol20194/part2019475/2019475537/images/c246x328/1.webp",
+    "image": "https://basket-54.wbbasket.ru/vol20194/part2019475/2019475537/images/big/1.webp?picsUpdate=0",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794153434621
+    "addedAt": 1794153434621,
+    "lastCheckedAt": 1794157075713,
+    "currentPrice": 144143
   }
 ]
