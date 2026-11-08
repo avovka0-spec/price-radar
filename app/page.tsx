@@ -57,6 +57,7 @@ export default function Page() {
   const [showOnboard, setShowOnboard] = useState(false);
   const [demo, setDemo] = useState(false);
   const [isIos, setIsIos] = useState(false);
+  const [booting, setBooting] = useState(true);
   // --- pull-to-refresh ---
   const [pullY, setPullY] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -130,20 +131,27 @@ export default function Page() {
     };
 
     (async () => {
-      if (isDemo) {
-        setDemo(true);
-        const d = demoData();
-        setProducts(d.products);
-        setHistory(d.history);
+      try {
+        if (isDemo) {
+          setDemo(true);
+          const d = demoData();
+          setProducts(d.products);
+          setHistory(d.history);
+          handleShared();
+          return;
+        }
+        const raw = localStorage.getItem(LS);
+        if (!raw) { setShowOnboard(true); handleShared(); return; }
+        const c: LocalCfg = JSON.parse(raw);
+        setCfg(c);
+        await loadRepo(c, false);
         handleShared();
-        return;
+      } catch (e: any) {
+        setCfgLoadErr(e?.message ?? "Ошибка запуска");
+        setShowOnboard(true);
+      } finally {
+        setBooting(false);
       }
-      const raw = localStorage.getItem(LS);
-      if (!raw) { setShowOnboard(true); handleShared(); return; }
-      const c: LocalCfg = JSON.parse(raw);
-      setCfg(c);
-      await loadRepo(c, false);
-      handleShared();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -320,6 +328,14 @@ export default function Page() {
     };
     return { d30: of(pts), all: of(all), days: all.length ? Math.min(180, Math.round((now - all[0].t) / 864e5)) : 0 };
   }, [history]);
+
+  if (booting) {
+    return (
+      <main className="wrap" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh", color: "var(--text2, #93a0c6)" }}>
+        Загрузка…
+      </main>
+    );
+  }
 
   if (!cfg && !demo) {
     return <main className="wrap"><Onboard onSave={saveCfg} open={showOnboard} /></main>;

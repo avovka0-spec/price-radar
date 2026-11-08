@@ -88,21 +88,32 @@ export async function readRepoJson<T>(cfg: GhConfig, path: string): Promise<T | 
 
 /** Записывает JSON-файл в репозиторий одним коммитом. */
 export async function writeRepoJson(cfg: GhConfig, path: string, data: unknown, message: string) {
+  const put = async (sha?: string) => {
+    const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`, {
+      method: "PUT",
+      headers: { ...headers(cfg.token), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message,
+        content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))),
+        branch: cfg.branch,
+        ...(sha ? { sha } : {}),
+      }),
+    });
+    return res;
+  };
+
   let sha: string | undefined;
   try {
     sha = (await ghJson<any>(cfg, path)).sha;
   } catch {
-    /* файла ещё нет — создадим; ошибку токена покажет PUT ниже */
+    /* файла ещё нет — создадим */
   }
-  const res = await fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`, {
-    method: "PUT",
-    headers: { ...headers(cfg.token), "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message,
-      content: btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2)))),
-      branch: cfg.branch,
-      ...(sha ? { sha } : {}),
-    }),
-  });
+  let res = await put(sha);
+  if (res.status === 409) {
+    // SHA устарел (параллельное изменение) — перечитать и повторить 1 раз
+    try { sha = (await ghJson<any>(cfg, path)).sha; } catch { sha = undefined; }
+    res = await put(sha);
+  }
+  if (res.status === 409) throw new GhError(409, "GitHub: файл изменился параллельно (конфликт SHA). Обновите данные и повторите.");
   if (!res.ok) throw new GhError(res.status, apiError(res.status, await res.text()));
 }
