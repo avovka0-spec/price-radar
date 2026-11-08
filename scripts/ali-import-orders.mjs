@@ -21,21 +21,24 @@ const parsePrice=(t)=>{ const s=String(t||"").replace(/\u00a0/g," ").replace(/,/
 
 async function extract(page){ return await page.evaluate(()=>{ const norm=s=>String(s||"").replace(/\s+/g," ").trim();
   const out=[]; const seen=new Set();
-  for (const el of Array.from(document.querySelectorAll("section,article,li,div,[class*='order']"))){
-    const t=norm(el.textContent); if(t.length<30||t.length>5000) continue;
-    if(!/order|заказ|достав|shipped|delivered|paid|оплачен|₽|RUB|\$/i.test(t)) continue;
-    if(el.querySelectorAll("section,article,li").length>15) continue;
-    const links=[...new Set(Array.from(el.querySelectorAll('a[href]')).map(a=>a.href).filter(h=>/aliexpress\.(ru|com)|\/item\/\d+\.html|\/product\/\d+\.html|productId=|\/order\//.test(h)))].slice(0,20);
+  for (const el of Array.from(document.querySelectorAll("section,article,li,div,[class*='order'],[data-spm]"))){
+    const t=norm(el.textContent); if(t.length<25||t.length<6000?false:false){} // noop
+    if(t.length<25||t.length>6000) continue;
+    if(!/order|заказ|достав|shipped|delivered|paid|оплачен|отмен|возврат|₽|RUB|\$/i.test(t)) continue;
+    if(el.querySelectorAll("section,article,li,div").length>45) continue;
+    const links=[...new Set(Array.from(el.querySelectorAll('a[href]')).map(a=>a.href).filter(h=>/aliexpress\.(ru|com)\/item|\/item\/\d+\.html|\/product\/\d+\.html|productId=|\/order\/detail|\/order-list/i.test(h)))].slice(0,25);
     const ids=[...new Set(links.map(h=>{let m=h.match(/\/item\/(\d{6,})\.html/); if(m) return m[1]; m=h.match(/\/product\/(\d{6,})\.html/); if(m) return m[1]; m=h.match(/[?&](?:productId|product_id|sku_id)=(\d{6,})/); return m?m[1]:null;}).filter(Boolean))];
-    const orderIds=(t.match(/\b\d{12,}\b/g)||[]).slice(0,5);
-    const prices=(t.match(/(?:₽|руб|RUB)\s*\d[\d\s.,]*|\d[\d\s.,]*\s*(?:₽|руб|RUB)|US\s*\$\s*[\d.,]+|\$\s*[\d.,]+/gi)||[]).slice(0,12);
-    if(!ids.length && !orderIds.length && !/order|заказ/i.test(t)) continue;
-    const key=(ids.join(",")||orderIds.join(",")||"")+prices[0]+t.slice(0,90); if(seen.has(key)) continue; seen.add(key);
-    out.push({text:t.slice(0,2000),links,productIds:ids,orderIds,pricesText:prices});
+    const orderIds=[...new Set((t.match(/(?:Заказ|Order)\s*[№#:]?\s*(\d{8,})/gi)||[]).map(s=>(s.match(/(\d{8,})/)||[])[1]).filter(Boolean))];
+    const prices=(t.match(/(?:₽|руб|RUB)\s*\d[\d\s.,]*|\d[\d\s.,]*\s*(?:₽|руб|RUB)|US\s*\$\s*[\d.,]+|\$\s*[\d.,]+/gi)||[]).slice(0,15);
+    const hasOrderSignal=/Заказ\s*[№#:]?\s*\d|Order\s*(ID|No\.?|#)|Отправлен|Доставлен|Получен|Оплачен|Ожидает|В пути|Отмен[её]н|Shipped|Delivered|Paid/i.test(t);
+    if(!ids.length && !orderIds.length && !hasOrderSignal) continue;
+    if(/Хиты распродажи|Покупайте самое классное|Вам может понравиться|Рекомендуем/i.test(t) && !hasOrderSignal) continue;
+    const key=(orderIds.join(",")||ids.join(",")||"")+prices[0]+t.slice(0,110); if(seen.has(key)) continue; seen.add(key);
+    out.push({text:t.slice(0,2200),links,productIds:ids,orderIds,pricesText:prices,hasOrderSignal});
     if(out.length>=150) break;
   }
   const body=norm(document.body?.innerText||"");
-  return {url:location.href,title:document.title,loginHint:/sign in|log in|войти|вход/i.test(body)&&out.length===0,antibotHint:/captcha|robot|verify|punish|blocked/i.test(body)||/captcha|punish/i.test(document.documentElement.innerHTML),orders:out};
+  return {url:location.href,title:document.title,loginHint:/sign in|log in|войти|вход/i.test(body)&&out.length===0,antibotHint:/captcha|robot|verify|punish|blocked/i.test(body)||/captcha|punish/i.test(document.documentElement.innerHTML),orders:out,noActiveOrders:/У вас нет активных заказов|Нет активных заказов|No active orders/i.test(body)};
 });}
 
 (async()=>{
@@ -48,8 +51,21 @@ async function extract(page){ return await page.evaluate(()=>{ const norm=s=>Str
     await page.waitForTimeout(WAIT+2000);
     for(let i=0;i<SCROLLS;i++){ await page.evaluate(()=>window.scrollTo(0,document.body.scrollHeight)).catch(()=>{}); await page.waitForTimeout(WAIT); }
     const snap=await extract(page);
-    const orders=(snap.orders||[]).map((o,i)=>({index:i+1,marketplace:"ali",kind:"order-item",...o,prices:(o.pricesText||[]).map(parsePrice).filter(n=>Number.isFinite(n)),totalGuess:(()=>{const p=(o.pricesText||[]).map(parsePrice).filter(n=>Number.isFinite(n)); return p.length?Math.max(...p):null;})(),importedAt:new Date().toISOString()}));
-    const stamp=ts(); const payload={marketplace:"ali",kind:"orders",exportedAt:new Date().toISOString(),sourceUrl:snap.url,pageTitle:snap.title,loginHint:!!snap.loginHint,antibotHint:!!snap.antibotHint,count:orders.length,notice:"Локальный экспорт заказов AliExpress (ПДн). Не коммитить.",orders};
+    const raw=(snap.orders||[]).map((o)=>({...o,prices:(o.pricesText||[]).map(parsePrice).filter(n=>Number.isFinite(n)),totalGuess:(()=>{const p=(o.pricesText||[]).map(parsePrice).filter(n=>Number.isFinite(n)); return p.length?Math.max(...p):null;})()}));
+    const filtered=raw.filter(o=>{
+      const t=String(o.text||"");
+      if(/ИзбранноеВойти|Любимые магазины|Мои отзывы|Служба поддержки|Справка AliExpress/i.test(t.replace(/\s/g,""))) return false;
+      if(/АктивныеАрхивЖдут отзываСпорыПоиск по заказам/i.test(t.replace(/\s/g,""))) return false;
+      if(/Добавьте паспорт|Ускорьте доставку/i.test(t) && !o.hasOrderSignal && !o.prices.length) return false;
+      if(/У вас нет активных заказов|Нет активных заказов|No active orders/i.test(t)) return true; // маркер состояния
+      if(/Хиты распродажи|Покупайте самое классное|Вам может понравиться|Рекомендуем/i.test(t) && !o.hasOrderSignal) return false;
+      if(!o.hasOrderSignal && (o.productIds||[]).length===0 && (o.orderIds||[]).length===0) return false;
+      return true;
+    });
+    const byKey=new Map();
+    for(const o of filtered){ const k=(o.orderIds||[]).join(",")||((o.productIds||[])[0]?`p:${o.productIds[0]}:${o.totalGuess}`:`t:${o.text.slice(0,120)}`); const p=byKey.get(k); if(!p||o.text.length>p.text.length||(o.productIds||[]).length>(p.productIds||[]).length) byKey.set(k,o); }
+    const orders=[...byKey.values()].map((o,i)=>({index:i+1,marketplace:"ali",kind:"order-item",...o,importedAt:new Date().toISOString()}));
+    const stamp=ts(); const payload={marketplace:"ali",kind:"orders",exportedAt:new Date().toISOString(),sourceUrl:snap.url,pageTitle:snap.title,loginHint:!!snap.loginHint,antibotHint:!!snap.antibotHint,noActiveOrders:!!snap.noActiveOrders,count:orders.length,notice:"Локальный экспорт заказов AliExpress (ПДн). Не коммитить.",orders};
     fs.writeFileSync(path.join(OUT_DIR,`orders-${stamp}.json`),JSON.stringify(payload,null,2)+"\n","utf8");
     fs.writeFileSync(path.join(OUT_DIR,"orders-latest.json"),JSON.stringify(payload,null,2)+"\n","utf8");
     const header=["index","productIds","orderIds","pricesText","totalGuess","links","text"];
