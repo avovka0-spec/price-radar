@@ -13,6 +13,7 @@ function has(n){return args.includes(n);} function getArg(n,d=null){const i=args
 if (has("--help")||has("-h")) { console.log(`Импорт заказов AliExpress/aliexpress.ru (локально)\n  --url <url> (по умолчанию aliexpress.ru orders) --headed --scrolls N --wait-ms N\n  Если URL заказов отличается, укажите --url.`); process.exit(0); }
 const HEADED=has("--headed"), SCROLLS=Math.max(0,Number(getArg("--scrolls","8"))||8), WAIT=Math.max(500,Number(getArg("--wait-ms","3500"))||3500);
 const START_URL=getArg("--url","https://aliexpress.ru/p/order/index.html");
+if(!getArg("--url")) log("Внимание: дефолтный URL aliexpress.ru может не совпадать с вашим аккаунтом. Если откроется не заказы/будет редирект — запустите с --url \"<ваш фактический URL заказов на aliexpress.ru>\".");
 const UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const ts=()=>new Date().toISOString().replace(/[:.]/g,"-"); const log=(m)=>console.log(`[${new Date().toISOString()}] ${m}`);
 const esc=(v)=>{const s=String(v??""); return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s;};

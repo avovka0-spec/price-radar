@@ -14,6 +14,7 @@ function has(n){return args.includes(n);} function getArg(n,d=null){const i=args
 if (has("--help")||has("-h")) { console.log(`Импорт избранного AliExpress/aliexpress.ru (локально)\n  --url <url> (по умолчанию wishlist aliexpress.ru) --headed --add-candidates --scrolls N\n  Если ваш URL избранного отличается, обязательно укажите --url.`); process.exit(0); }
 const HEADED=has("--headed"), SHOW_CANDIDATES=has("--add-candidates"), SCROLLS=Math.max(0,Number(getArg("--scrolls","8"))||8);
 const START_URL=getArg("--url","https://aliexpress.ru/p/wishlist/index.html");
+if(!getArg("--url")) log("Внимание: дефолтный URL aliexpress.ru может не совпадать с вашим аккаунтом. Если откроется не избранное/будет редирект — запустите с --url \"<ваш фактический URL избранного на aliexpress.ru>\".");
 const UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 const ts=()=>new Date().toISOString().replace(/[:.]/g,"-"); const log=(m)=>console.log(`[${new Date().toISOString()}] ${m}`);
 const esc=(v)=>{const s=String(v??""); return /[",\n]/.test(s)?`"${s.replace(/"/g,'""')}"`:s;};
