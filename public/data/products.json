@@ -483,5 +483,18 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427
+  },
+  {
+    "id": "67c6f0c3-6aa7-44d4-ba6f-075ced50177f",
+    "sku": "999000111222",
+    "url": "https://www.wildberries.ru/catalog/999000111222/detail.aspx",
+    "name": "🧪 ТЕСТ Telegram (удалить после проверки)",
+    "brand": "TEST",
+    "marketplace": "wb",
+    "thresholdPct": 5,
+    "notify": true,
+    "currentPrice": 1000,
+    "addedAt": 1794166371146,
+    "lastCheckedAt": null
   }
 ]
