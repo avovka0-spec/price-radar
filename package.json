@@ -12,7 +12,10 @@
     "normalize:prices": "node scripts/normalize-prices.mjs",
     "import:wb:favorites": "node scripts/wb-import-favorites.mjs",
     "import:wb:orders": "node scripts/wb-import-orders.mjs",
-    "import:wb:prices": "node scripts/wb-import-personal-prices.mjs"
+    "import:wb:prices": "node scripts/wb-import-personal-prices.mjs",
+    "import:ozon:favorites": "node scripts/ozon-import-favorites.mjs",
+    "import:ozon:orders": "node scripts/ozon-import-orders.mjs",
+    "import:ozon:prices": "node scripts/ozon-import-personal-prices.mjs"
   },
   "dependencies": {
     "next": "^14.2.35",

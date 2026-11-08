@@ -56,6 +56,16 @@ const ROUTES = {
     normalize: "scripts/normalize-prices.mjs",
     norm: "scripts/normalize-prices.mjs",
   },
+  ozon: {
+    favorites: "scripts/ozon-import-favorites.mjs",
+    favourite: "scripts/ozon-import-favorites.mjs",
+    orders: "scripts/ozon-import-orders.mjs",
+    prices: "scripts/ozon-import-personal-prices.mjs",
+    "personal-prices": "scripts/ozon-import-personal-prices.mjs",
+    personal: "scripts/ozon-import-personal-prices.mjs",
+    normalize: "scripts/normalize-prices.mjs",
+    norm: "scripts/normalize-prices.mjs",
+  },
 };
 
 function help(code = 0) {
@@ -67,15 +77,17 @@ function help(code = 0) {
     "",
     "Маркетплейсы:",
     "  wb / wildberries      — реализовано: favorites, orders, prices, normalize",
-    "  ozon                  — планируется",
+    "  ozon                  — MVP (best-effort): favorites, orders, prices, normalize",
     "  ym / yandex-market    — планируется",
     "  ali / aliexpress      — планируется",
     "",
-    "Примеры (WB):",
+    "Примеры:",
     "  node scripts/import.mjs -m wb -k favorites --headed --add-candidates",
     "  node scripts/import.mjs -m wb -k orders --headed --scrolls 12",
     "  node scripts/import.mjs -m wb -k prices --from-products --limit 20",
-    "  node scripts/import.mjs -m wb -k normalize",
+    "  node scripts/import.mjs -m ozon -k favorites --headed",
+    "  node scripts/import.mjs -m ozon -k orders --headed --scrolls 8",
+    "  node scripts/import.mjs -m ozon -k normalize",
     "",
     "Переменные: PRICERADAR_EDGE_PROFILE, PRICERADAR_BROWSER_HEADLESS (эксперимент).",
   ];

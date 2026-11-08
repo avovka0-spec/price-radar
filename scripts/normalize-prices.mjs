@@ -24,10 +24,10 @@ function getArg(name, def = null) {
 }
 if (has("--help") || has("-h")) {
   console.log(`Нормализация публичной и персональной цены (локально)
-  --marketplace wb|all   фильтр (по умолчанию wb)
-  --personal <path>      файл personal-prices-latest.json
-  --products <path>      products.json (по умолчанию public/data/products.json)
-Результат: .local/marketplaces/normalized-prices.json|csv (не коммитить).`);
+  --marketplace wb|ozon|ym|ali|all   фильтр (по умолчанию wb)
+  --personal <path>                 файл personal-prices-latest.json
+  --products <path>                 products.json (по умолчанию public/data/products.json)
+Результат: .local/marketplaces/normalized-prices[-<marketplace>]-*.json|csv (не коммитить).`);
   process.exit(0);
 }
 
@@ -52,7 +52,8 @@ if (!Array.isArray(products)) {
 const personal = readJson(personalPath);
 if (!personal || !Array.isArray(personal.items)) {
   console.error(`Не найден/невалиден снимок персональных цен: ${personalPath}`);
-  console.error("Сначала запустите: node scripts/import.mjs -m wb -k prices --from-products (или --from-favorites-latest)");
+  const m = marketplace === "all" ? "<marketplace>" : marketplace;
+  console.error(`Сначала запустите: node scripts/import.mjs -m ${m} -k prices --from-products (или --from-favorites-latest)`);
   process.exit(1);
 }
 
@@ -84,7 +85,7 @@ for (const p of products) {
     personalCapturedAt: pers?.capturedAt || null,
     publicCheckedAt: p.lastCheckedAt ? new Date(p.lastCheckedAt).toISOString() : null,
     priceSourcePublic: "tracker/public",
-    priceSourcePersonal: pers ? "wb_lk_profile" : null,
+    priceSourcePersonal: pers ? `${m}_lk_profile` : null,
     flags: {
       hasPersonal: !!pers,
       cheaperInProfile: delta != null ? delta < 0 : null,

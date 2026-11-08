@@ -38,7 +38,7 @@ WB/некоторые сайты блокируют настоящий `headless
 | WB | Избранное | MVP: `scripts/wb-import-favorites.mjs` |
 | WB | Заказы | MVP: `scripts/wb-import-orders.mjs` (best-effort, локально) |
 | WB | Персональные цены/скидки | MVP: `scripts/wb-import-personal-prices.mjs` (снимок цен из залогиненного профиля) |
-| Ozon | избранное/заказы/скидки | планируется |
+| Ozon | избранное/заказы/скидки | MVP (best-effort): `scripts/ozon-import-*.mjs`. Антибот/вёрстка часто меняются — возможна донастройка селекторов по `*-latest.json`/`debug`. |
 | Яндекс Маркет | избранное/заказы/скидки | планируется |
 | AliExpress | избранное/заказы/скидки | планируется |
 
@@ -47,7 +47,10 @@ WB/некоторые сайты блокируют настоящий `headless
 node scripts/import.mjs -m wb -k favorites --headed --add-candidates
 node scripts/import.mjs -m wb -k orders --headed --scrolls 12
 node scripts/import.mjs -m wb -k prices --from-products --limit 20
-npm run import -- -m wb -k favorites --headed
+node scripts/import.mjs -m ozon -k favorites --headed
+node scripts/import.mjs -m ozon -k orders --headed --scrolls 8
+node scripts/import.mjs -m ozon -k prices --from-favorites-latest --headed
+npm run import -- -m ozon -k favorites --headed
 ```
 
 ## WB: импорт избранного
@@ -84,17 +87,19 @@ node scripts/wb-import-orders.mjs --headed --scrolls 12
 
 Скрипт открывает раздел заказов, ждёт/прокручивает страницу и сохраняет извлечённые блоки в `.local/marketplaces/wb/orders-*.json|csv` и `orders-latest.json`. Это **best-effort**: WB часто меняет вёрстку. Заказы — чувствительные данные, не коммитить.
 
-## WB: нормализация «публичная vs персональная» цена
+## Нормализация «публичная vs персональная» цена (WB/Ozon MVP)
 
 ```powershell
 # после снятия снимка персональных цен:
 node scripts/normalize-prices.mjs --marketplace wb
+node scripts/normalize-prices.mjs --marketplace ozon
 # или через общий CLI:
 node scripts/import.mjs -m wb -k normalize
+node scripts/import.mjs -m ozon -k normalize
 npm run normalize:prices
 ```
 
-Читает `public/data/products.json` (публичный трекинг) и `.local/marketplaces/wb/personal-prices-latest.json`, сохраняет сравнение **только** в `.local/marketplaces/normalized-prices-*.json|csv` (`normalized-prices-latest.json`). Ничего не пишет в `public/data` и не коммитит — персональные цены ЛК не должны попадать в публичные данные.
+Читает `public/data/products.json` (публичный трекинг) и `.local/marketplaces/<marketplace>/personal-prices-latest.json`, сохраняет сравнение **только** в `.local/marketplaces/normalized-prices-*.json|csv` (`normalized-prices-latest.json`). Ничего не пишет в `public/data` и не коммитит — персональные цены ЛК не должны попадать в публичные данные.
 
 ## WB: персональные цены/скидки (MVP)
 
@@ -108,10 +113,31 @@ node scripts/wb-import-personal-prices.mjs --from-favorites-latest --headed
 
 Скрипт открывает карточки товаров в вашем залогиненном профиле и сохраняет снимок видимых цен/подсказок скидок в `.local/marketplaces/wb/personal-prices-*.json|csv`. Используйте для сравнения с публичной ценой трекера; автоматически менять `products.json` скрипт не должен.
 
+## Ozon: импорт ЛК (MVP, best-effort)
+
+Используйте **тот же профиль Edge ЦенРадара** (`npm run browser:login`) и войдите в Ozon вручную (антибот/капча возможны). Все результаты — только в `.local/marketplaces/ozon/` (gitignored).
+
+```powershell
+# избранное
+node scripts/import.mjs -m ozon -k favorites --headed
+npm run import:ozon:favorites -- --headed
+
+# заказы (список; при необходимости укажите --url)
+node scripts/import.mjs -m ozon -k orders --headed --scrolls 8
+npm run import:ozon:orders -- --headed
+
+# персональные цены (по избранному/трекеру/списку)
+node scripts/import.mjs -m ozon -k prices --from-favorites-latest --headed
+node scripts/import.mjs -m ozon -k prices --from-products --limit 20 --headed
+node scripts/import.mjs -m ozon -k prices --urls https://www.ozon.ru/product/... --headed
+```
+
+MVP использует эвристики DOM/ссылок `/product/<id>` и может требовать донастройки после реального прогона. Для тюнинга пришлите **обезличенный** фрагмент `.local/marketplaces/ozon/*-latest.json` (без персональных данных, которые не хотите раскрывать) и/или поле `debug`/`rawText`.
+
 ## Следующие шаги (план)
 
-1. Улучшить парсинг WB (избранное/заказы/цены) по реальным экспортам/DOM-снимкам после ваших прогонов.
-2. Адаптеры **Ozon → Яндекс Маркет → AliExpress** (сложность/антибот выше).
+1. Улучшить парсинг WB/Ozon (избранное/заказы/цены) по реальным экспортам/DOM-снимкам после ваших прогонов.
+2. Адаптеры **Яндекс Маркет → AliExpress** (сложность/антибот выше).
 3. Интеграция с приложением: безопасный локальный поток «импорт → выбор → добавить в трекинг» (без публикации данных ЛК).
 4. При необходимости: запись нормализованного сравнения в *приватный* локальный отчёт/UI, без записи персональных цен в `public/data`.
 
