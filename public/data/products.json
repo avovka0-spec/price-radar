@@ -353,30 +353,6 @@
     "addedAt": 1794152869427
   },
   {
-    "id": "8e7d6503-738a-4dfb-ab5d-a4a40d36b6c8",
-    "sku": "ozon:3131752618",
-    "url": "https://www.ozon.ru/product/asus-rog-strix-x870e-h-gaming-wifi7-amd-x870e-am5-ddr5-materinskaya-plata-3131752618/",
-    "name": "ASUS ROG STRIX X870E-H GAMING WIFI7 AMD X870E AM5 DDR5 Материнская плата",
-    "brand": "",
-    "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-v/wc500/8365609507.jpg",
-    "thresholdPct": 10,
-    "notify": true,
-    "addedAt": 1794152869427
-  },
-  {
-    "id": "f463de31-fe7f-4000-ab98-32de8fe2fd01",
-    "sku": "ozon:3362370704",
-    "url": "https://www.ozon.ru/product/silikonovaya-forma-dlya-aerogrilya-xiaomi-ksiaomi-redmond-i-duhovki-18h18-sm-antiprigarnaya-3362370704/",
-    "name": "Силиконовая форма для аэрогриля XIAOMI/КСИАОМИ/REDMOND и духовки 18х18 см антипригарная без запаха",
-    "brand": "",
-    "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-i/wc500/8780713290.jpg",
-    "thresholdPct": 10,
-    "notify": true,
-    "addedAt": 1794152869427
-  },
-  {
     "id": "2f2c1dc7-e9c5-48ca-a269-dd975d3aea4d",
     "sku": "ozon:5216796204",
     "url": "https://www.ozon.ru/product/pakety-fasovochnye-30h40-sm-1-sht-15-mkm-5216796204/",
@@ -413,18 +389,6 @@
     "addedAt": 1794152869427
   },
   {
-    "id": "5a0e05be-6dbe-474b-995e-9aff0ae82a55",
-    "sku": "ozon:4669826954",
-    "url": "https://www.ozon.ru/product/io-by-red-square-type-84-magnetic-pro-wireless-g3ms-magnetite-ice-besprovodnaya-magnitno-4669826954/",
-    "name": "IO by Red Square Type 84 Magnetic Pro Wireless G3ms Magnetite Ice Беспроводная магнитно-механическая игровая клавиатура, русская раскладка, белая",
-    "brand": "",
-    "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-r/wc500/11365324947.jpg",
-    "thresholdPct": 10,
-    "notify": true,
-    "addedAt": 1794152869427
-  },
-  {
     "id": "8e3351da-e665-4c5e-92ef-8b9ebda15efb",
     "sku": "ozon:5844583751",
     "url": "https://www.ozon.ru/product/kuhonnyy-nozh-universalnyy-1-sht-lezvie-15-5-sm-vysokouglerodistaya-stal-5844583751/",
@@ -432,18 +396,6 @@
     "brand": "",
     "marketplace": "ozon",
     "image": "https://ir.ozone.ru/s3/multimedia-1-o/wc500/7456592184.jpg",
-    "thresholdPct": 10,
-    "notify": true,
-    "addedAt": 1794152869427
-  },
-  {
-    "id": "fa635b4b-c6f3-42f1-8cf1-5c97b157a3cb",
-    "sku": "ozon:5382521288",
-    "url": "https://www.ozon.ru/product/icebook-mini-pk-icebook-mini-pc-mini-pk-amd-ryzen-ai-9-hx-370-ram-32-gb-ssd-1024-gb-amd-radeon-5382521288/",
-    "name": "ICEBOOK Мини-ПК ICEBOOK MINI PC Мини-ПК AMD Ryzen AI 9 HX 370, RAM 32 ГБ, SSD 1024 ГБ, AMD Radeon 890M, Windows 11 PRO,Черный корпус Двойные вентиляторы (AMD Ryzen AI 9 HX 370, RAM 32 ГБ, SSD 1024 ГБ, AMD Radeon 890M, Windows 11 Pro), черны",
-    "brand": "",
-    "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-c/wc500/13580762844.jpg",
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427
