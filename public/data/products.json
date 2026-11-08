@@ -365,17 +365,5 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427
-  },
-  {
-    "id": "8e3351da-e665-4c5e-92ef-8b9ebda15efb",
-    "sku": "ozon:5844583751",
-    "url": "https://www.ozon.ru/product/kuhonnyy-nozh-universalnyy-1-sht-lezvie-15-5-sm-vysokouglerodistaya-stal-5844583751/",
-    "name": "Кухонный нож универсальный 1 шт лезвие 15.5 см высокоуглеродистая сталь",
-    "brand": "",
-    "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-o/wc500/7456592184.jpg",
-    "thresholdPct": 10,
-    "notify": true,
-    "addedAt": 1794152869427
   }
 ]
