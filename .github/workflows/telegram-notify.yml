@@ -10,6 +10,11 @@ on:
         description: "Текст сообщения (UTF-8)"
         required: true
         type: string
+      bot:
+        description: "task (по умолч.) или price — выбор токена бота"
+        required: false
+        type: string
+        default: task
   # Fallback для токенов без scope workflow (достаточно scope repo).
   repository_dispatch:
     types: [telegram-notify]
@@ -21,12 +26,19 @@ jobs:
     steps:
       - name: Отправка сообщения в Telegram (UTF-8 через Node)
         env:
-          BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          BOT_TOKEN_TASK: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          BOT_TOKEN_PRICE: ${{ secrets.TELEGRAM_PRICE_BOT_TOKEN }}
+          BOT_KIND: ${{ github.event.inputs.bot || github.event.client_payload.bot || 'task' }}
           CHAT_ID: ${{ github.event.inputs.chat_id || github.event.client_payload.chat_id }}
           TEXT: ${{ github.event.inputs.text || github.event.client_payload.text }}
         run: |
           node << 'NODE_EOF'
           const https = require("https");
+          const kind = String(process.env.BOT_KIND || "task").toLowerCase();
+          const token = kind === "price"
+            ? (process.env.BOT_TOKEN_PRICE || process.env.BOT_TOKEN_TASK)
+            : process.env.BOT_TOKEN_TASK;
+          if (!token) { console.error("missing bot token for kind=" + kind); process.exit(1); }
           const payload = JSON.stringify({
             chat_id: process.env.CHAT_ID,
             text: process.env.TEXT,
@@ -34,7 +46,7 @@ jobs:
           });
           const req = https.request({
             hostname: "api.telegram.org",
-            path: "/bot" + process.env.BOT_TOKEN + "/sendMessage",
+            path: "/bot" + token + "/sendMessage",
             method: "POST",
             headers: {
               "Content-Type": "application/json; charset=utf-8",

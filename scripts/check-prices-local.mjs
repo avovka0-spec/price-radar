@@ -14,8 +14,11 @@
 //   CHECK_DELAY_MS=4500                 (задержка между товарами, для Ozon/ЯМ/Ali полезно больше)
 //
 // Push-уведомления: если в .env заданы VAPID_*.
-// Алерты в Telegram (падение/цель): TELEGRAM_PRICE_BOT_TOKEN + TELEGRAM_PRICE_CHAT_ID
-// (или fallback TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID). Токен хранить только в .env.
+// Алерты в Telegram (падение/цель):
+//   TELEGRAM_PRICE_BOT_TOKEN + TELEGRAM_PRICE_CHAT_ID (или fallback TELEGRAM_BOT_TOKEN/CHAT_ID)
+//   При ошибке прямого доступа (Telegram заблокирован) — relay через GitHub Actions
+//   (нужны GH_TOKEN локально и секрет TELEGRAM_PRICE_BOT_TOKEN в GitHub Actions;
+//   fallback: TELEGRAM_BOT_TOKEN). Принудительно relay: TELEGRAM_ALERT_RELAY=1.
 import {
   readFileSync,
   writeFileSync,
@@ -25,6 +28,7 @@ import {
   unlinkSync,
 } from "node:fs";
 import { execFileSync } from "node:child_process";
+import https from "node:https";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
@@ -85,6 +89,41 @@ function parsePrice(text) {
   return m ? Number(m[1].replace(/[^\d]/g, "")) : 0;
 }
 function clean(s){ return String(s||"").replace(/\s+/g," ").trim(); }
+
+function ghDispatch(body) {
+  return new Promise((resolve, reject) => {
+    const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+    if (!token) return reject(new Error("GH_TOKEN/GITHUB_TOKEN not set"));
+    const owner = process.env.GH_OWNER || "avovka0-spec";
+    const repo = process.env.GH_REPO || "price-radar";
+    const data = JSON.stringify(body.payload);
+    const req = https.request({
+      hostname: "api.github.com",
+      path: body.workflow ? `/repos/${owner}/${repo}/actions/workflows/${body.workflow}/dispatches` : `/repos/${owner}/${repo}/dispatches`,
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: "application/vnd.github+json",
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(data),
+        "User-Agent": "price-radar-local-agent",
+      },
+    }, (res) => { let b=""; res.on("data",c=>b+=c); res.on("end",()=>resolve({status:res.statusCode,body:b})); });
+    req.on("error", reject); req.write(data); req.end();
+  });
+}
+
+async function sendTelegramRelay(notes, chatId) {
+  const text = `ЦенРадар: изменение цен (${notes.length})\n\n${notes.join("\n")}`.slice(0, 3900);
+  // workflow_dispatch first, then repository_dispatch fallback
+  let r = await ghDispatch({ workflow: "telegram-notify.yml", payload: { ref: "main", inputs: { chat_id: String(chatId), text, bot: "price" } } });
+  if (r.status === 204) return { ok: true, via: "workflow_dispatch" };
+  if ([403,404,422].includes(r.status)) {
+    r = await ghDispatch({ payload: { event_type: "telegram-notify", client_payload: { chat_id: String(chatId), text, bot: "price" } } });
+    if (r.status === 204) return { ok: true, via: "repository_dispatch" };
+  }
+  return { ok: false, status: r.status, body: String(r.body||"").slice(0,180) };
+}
 
 function productUrl(p){
   if (p.url) return p.url;
@@ -198,27 +237,39 @@ async function fetchMarketCard(ctx, p){
 }
 
 async function sendTelegramAlerts(notes) {
-  const token = process.env.TELEGRAM_PRICE_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
-  const chatId = process.env.TELEGRAM_PRICE_CHAT_ID || process.env.TELEGRAM_CHAT_ID;
-  if (!notes.length || !token || !chatId) {
-    if (notes.length && (!token || !chatId)) log("telegram price alerts: token/chat_id not set, skip");
-    return;
-  }
+  const chatId = process.env.TELEGRAM_PRICE_CHAT_ID || process.env.TELEGRAM_CHAT_ID || "1782021699";
+  if (!notes.length) return;
+  const forceRelay = process.env.TELEGRAM_ALERT_RELAY === "1";
+  const directToken = process.env.TELEGRAM_PRICE_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
   const text = `ЦенРадар: изменение цен (${notes.length})\n\n${notes.join("\n")}`.slice(0, 3900);
-  try {
-    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true }),
-    });
-    if (!res.ok) {
+
+  if (!forceRelay && directToken) {
+    try {
+      const controller = new AbortController();
+      const t = setTimeout(() => controller.abort(), 12000);
+      const res = await fetch(`https://api.telegram.org/bot${directToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true }),
+        signal: controller.signal,
+      }).finally(() => clearTimeout(t));
+      if (res.ok) { log(`telegram alert sent (direct): ${notes.length} item(s)`); return; }
       const body = await res.text().catch(() => "");
-      log(`telegram alert failed: ${res.status} ${body.slice(0, 200)}`);
-    } else {
-      log(`telegram alert sent: ${notes.length} item(s)`);
+      log(`telegram direct failed: ${res.status} ${body.slice(0, 160)}; trying relay`);
+    } catch (e) {
+      log(`telegram direct error: ${e && e.message ? e.message : e}; trying relay`);
     }
+  }
+
+  // Relay через GitHub Actions (работает, если прямой доступ к Telegram заблокирован).
+  // Нужны GH_TOKEN (repo+workflow) локально и секрет TELEGRAM_PRICE_BOT_TOKEN в GitHub Actions
+  // (или fallback на TELEGRAM_BOT_TOKEN).
+  try {
+    const r = await sendTelegramRelay(notes, chatId);
+    if (r.ok) log(`telegram alert sent (relay/${r.via}): ${notes.length} item(s)`);
+    else log(`telegram relay failed: ${r.status} ${r.body || ""}`);
   } catch (e) {
-    log(`telegram alert error: ${e && e.message ? e.message : e}`);
+    log(`telegram relay error: ${e && e.message ? e.message : e}`);
   }
 }
 

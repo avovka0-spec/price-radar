@@ -101,12 +101,13 @@ VAPID_SUBJECT=mailto:you@example.com
 ```
 Публичный ключ — в `public/data/config.json` (`vapidPublicKey`). Если VAPID не задан, push пропускается.
 
-**Telegram-алерты** при падении цены/достижении целевой (локальный агент, прямая отправка в Bot API) — в `.env` (gitignored, не коммитить токен):
+**Telegram-алерты** при падении цены/достижении целевой — в `.env` (gitignored, не коммитить токен):
 ```
 TELEGRAM_PRICE_BOT_TOKEN=123456:ABC...   # токен бота (напр. @Price_radar_monitor_bot)
 TELEGRAM_PRICE_CHAT_ID=1782021699        # куда слать (ваш личный chat_id)
+TELEGRAM_ALERT_RELAY=1                   # опционально: если api.telegram.org заблокирован локально
 ```
-Fallback: если `TELEGRAM_PRICE_*` не заданы, используются `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`. Сообщение отправляется сводкой за запуск при наличии событий (`notifyQueue`), как и push. Ошибки Telegram не останавливают проверку цен.
+Локальный агент пытается отправить **напрямую**; при сетевой ошибке/блокировке автоматически пробует **relay через GitHub Actions** (`workflow_dispatch` → `telegram-notify.yml`, runner GitHub имеет доступ к Telegram). Для relay нужны `GH_TOKEN` (scope `repo` + `workflow`) в `.env` и секрет **`TELEGRAM_PRICE_BOT_TOKEN`** в GitHub: *Settings → Secrets and variables → Actions* (иначе workflow использует fallback `TELEGRAM_BOT_TOKEN` — алерт придёт от основного бота). Fallback переменных: `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`. Сводка за запуск, как и push; ошибки не останавливают проверку.
 
 ## 6. График цены в PWA
 

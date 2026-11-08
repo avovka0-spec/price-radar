@@ -5,6 +5,7 @@
 // Использование:
 //   node scripts/notify-telegram.mjs "✅ Готово: задача выполнена"
 //   node scripts/notify-telegram.mjs --file report.md
+//   node scripts/notify-telegram.mjs --bot price "📉 цена упала..."   # бот мониторинга (секрет TELEGRAM_PRICE_BOT_TOKEN в Actions)
 //   echo "текст" | node scripts/notify-telegram.mjs
 //
 // Переменные (можно положить в .env в корне репозитория):
@@ -12,6 +13,7 @@
 //   GH_OWNER         — по умолчанию avovka0-spec
 //   GH_REPO          — по умолчанию price-radar
 //   TELEGRAM_CHAT_ID — по умолчанию 1782021699
+//   TELEGRAM_NOTIFY_BOT — task|price (по умолчанию task)
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as https from "node:https";
@@ -66,17 +68,24 @@ function http(method, url, headers, body) {
   });
 }
 
-function readText() {
+function readInput() {
   const args = process.argv.slice(2);
-  const fileIdx = args.indexOf("--file");
-  if (fileIdx >= 0) {
-    const file = args[fileIdx + 1];
-    if (!file) throw new Error("после --file нужен путь к файлу");
-    return fs.readFileSync(file, "utf8");
+  let bot = process.env.TELEGRAM_NOTIFY_BOT || "task";
+  const rest = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === "--bot" && args[i + 1]) { bot = args[++i]; continue; }
+    if (args[i] === "--file" && args[i + 1]) { rest.push("--file", args[++i]); continue; }
+    rest.push(args[i]);
   }
-  if (args.length) return args.join(" ");
-  if (!process.stdin.isTTY) return fs.readFileSync(0, "utf8");
-  return "";
+  const fileIdx = rest.indexOf("--file");
+  if (fileIdx >= 0) {
+    const file = rest[fileIdx + 1];
+    if (!file) throw new Error("после --file нужен путь к файлу");
+    return { bot, text: fs.readFileSync(file, "utf8") };
+  }
+  if (rest.length) return { bot, text: rest.join(" ") };
+  if (!process.stdin.isTTY) return { bot, text: fs.readFileSync(0, "utf8") };
+  return { bot, text: "" };
 }
 
 loadDotEnv();
@@ -98,7 +107,9 @@ async function main() {
     throw new Error("GH_TOKEN не задан — добавьте его в .env или переменные окружения");
   }
 
-  let text = readText().trim();
+  const input = readInput();
+  let text = String(input.text || "").trim();
+  const bot = String(input.bot || "task").toLowerCase();
   if (!text) {
     throw new Error("пустой текст: передайте сообщение аргументом, через --file или stdin");
   }
@@ -109,10 +120,10 @@ async function main() {
     "POST",
     `https://api.github.com/repos/${OWNER}/${REPO}/actions/workflows/telegram-notify.yml/dispatches`,
     jsonHeaders,
-    JSON.stringify({ ref: "main", inputs: { chat_id: CHAT_ID, text } }),
+    JSON.stringify({ ref: "main", inputs: { chat_id: CHAT_ID, text, bot } }),
   );
   if (dispatch.status === 204) {
-    console.log("sent via workflow_dispatch");
+    console.log(`sent via workflow_dispatch (bot=${bot})`);
     return;
   }
 
@@ -122,10 +133,10 @@ async function main() {
       "POST",
       `https://api.github.com/repos/${OWNER}/${REPO}/dispatches`,
       jsonHeaders,
-      JSON.stringify({ event_type: "telegram-notify", client_payload: { chat_id: CHAT_ID, text } }),
+      JSON.stringify({ event_type: "telegram-notify", client_payload: { chat_id: CHAT_ID, text, bot } }),
     );
     if (fallback.status === 204) {
-      console.log("sent via repository_dispatch");
+      console.log(`sent via repository_dispatch (bot=${bot})`);
       return;
     }
     throw new Error(
