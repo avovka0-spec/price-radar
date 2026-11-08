@@ -91,17 +91,22 @@ Register-ScheduledTask -TaskName "PriceRadarLocal" -Action $action -Trigger $tri
 
 Задача работает **только когда пользователь залогинен**.
 
-## 5. Push-уведомления
+## 5. Уведомления (Web Push и Telegram)
 
-В `.env`:
-
+**Web Push** (PWA/iPhone) — в `.env`:
 ```
 VAPID_PUBLIC_KEY=...
 VAPID_PRIVATE_KEY=...
 VAPID_SUBJECT=mailto:you@example.com
 ```
+Публичный ключ — в `public/data/config.json` (`vapidPublicKey`). Если VAPID не задан, push пропускается.
 
-Публичный ключ — в `public/data/config.json` (`vapidPublicKey`). Если приватного нет, цены всё равно обновляются; push пропускается.
+**Telegram-алерты** при падении цены/достижении целевой (локальный агент, прямая отправка в Bot API) — в `.env` (gitignored, не коммитить токен):
+```
+TELEGRAM_PRICE_BOT_TOKEN=123456:ABC...   # токен бота (напр. @Price_radar_monitor_bot)
+TELEGRAM_PRICE_CHAT_ID=1782021699        # куда слать (ваш личный chat_id)
+```
+Fallback: если `TELEGRAM_PRICE_*` не заданы, используются `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`. Сообщение отправляется сводкой за запуск при наличии событий (`notifyQueue`), как и push. Ошибки Telegram не останавливают проверку цен.
 
 ## 6. График цены в PWA
 

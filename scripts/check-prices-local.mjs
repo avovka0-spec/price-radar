@@ -13,10 +13,9 @@
 //   CHECK_MARKETPLACES=wb,ozon,ym,ali  (по умолчанию все поддерживаемые)
 //   CHECK_DELAY_MS=4500                 (задержка между товарами, для Ozon/ЯМ/Ali полезно больше)
 //
-// Push-уведомления отправляются, только если в .env заданы VAPID_*:
-//   VAPID_PUBLIC_KEY=...
-//   VAPID_PRIVATE_KEY=...
-//   VAPID_SUBJECT=mailto:you@example.com
+// Push-уведомления: если в .env заданы VAPID_*.
+// Алерты в Telegram (падение/цель): TELEGRAM_PRICE_BOT_TOKEN + TELEGRAM_PRICE_CHAT_ID
+// (или fallback TELEGRAM_BOT_TOKEN/TELEGRAM_CHAT_ID). Токен хранить только в .env.
 import {
   readFileSync,
   writeFileSync,
@@ -198,6 +197,31 @@ async function fetchMarketCard(ctx, p){
   }
 }
 
+async function sendTelegramAlerts(notes) {
+  const token = process.env.TELEGRAM_PRICE_BOT_TOKEN || process.env.TELEGRAM_BOT_TOKEN;
+  const chatId = process.env.TELEGRAM_PRICE_CHAT_ID || process.env.TELEGRAM_CHAT_ID;
+  if (!notes.length || !token || !chatId) {
+    if (notes.length && (!token || !chatId)) log("telegram price alerts: token/chat_id not set, skip");
+    return;
+  }
+  const text = `ЦенРадар: изменение цен (${notes.length})\n\n${notes.join("\n")}`.slice(0, 3900);
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ chat_id: chatId, text, disable_web_page_preview: true }),
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      log(`telegram alert failed: ${res.status} ${body.slice(0, 200)}`);
+    } else {
+      log(`telegram alert sent: ${notes.length} item(s)`);
+    }
+  } catch (e) {
+    log(`telegram alert error: ${e && e.message ? e.message : e}`);
+  }
+}
+
 async function sendPush(notes, removed, subs, vapidReady) {
   if (!notes.length || !vapidReady) return;
   const payload = JSON.stringify({
@@ -351,6 +375,7 @@ async function sendPush(notes, removed, subs, vapidReady) {
 
     await ctx.close().catch(() => {});
     await sendPush(notifyQueue, deadSubs, subs, vapidReady);
+    await sendTelegramAlerts(notifyQueue);
 
     if (deadSubs.length) {
       subs = subs.filter((s) => !deadSubs.includes(s.endpoint));
