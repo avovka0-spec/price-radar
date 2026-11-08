@@ -61,19 +61,29 @@ export default function Page() {
   // --- pull-to-refresh ---
   const [pullY, setPullY] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  const pullStartRef = useRef(0);
+  const pullStartYRef = useRef(0);
+  const pullStartXRef = useRef(0);
   const pullingRef = useRef(false);
   const pullYRef = useRef(0);
   useEffect(() => {
     const onStart = (e: TouchEvent) => {
       if (window.scrollY <= 2 && e.touches.length === 1) {
-        pullStartRef.current = e.touches[0].clientY;
+        pullStartYRef.current = e.touches[0].clientY;
+        pullStartXRef.current = e.touches[0].clientX;
         pullingRef.current = true;
       }
     };
     const onMove = (e: TouchEvent) => {
       if (!pullingRef.current) return;
-      const dy = e.touches[0].clientY - pullStartRef.current;
+      const dy = e.touches[0].clientY - pullStartYRef.current;
+      const dx = e.touches[0].clientX - pullStartXRef.current;
+      // Горизонтальный жест — не перехватывать (свайп для удаления)
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
+        pullingRef.current = false;
+        pullYRef.current = 0;
+        setPullY(0);
+        return;
+      }
       if (dy > 0 && window.scrollY <= 2) {
         const v = Math.min(dy * 0.5, 90);
         pullYRef.current = v;
