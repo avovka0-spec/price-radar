@@ -40,17 +40,17 @@ WB/некоторые сайты блокируют настоящий `headless
 | WB | Персональные цены/скидки | MVP: `scripts/wb-import-personal-prices.mjs` (снимок цен из залогиненного профиля) |
 | Ozon | избранное/заказы/скидки | MVP (best-effort): `scripts/ozon-import-*.mjs`. Антибот/вёрстка часто меняются — возможна донастройка селекторов по `*-latest.json`/`debug`. |
 | Яндекс Маркет | избранное/заказы/скидки | MVP (best-effort): `scripts/ym-import-*.mjs`. Возможны SmartCaptcha/антибот и смена URL разделов — используйте `--headed` и при необходимости `--url`; для тюнинга пришлите обезличенный `*-latest.json`/`debug`. |
-| AliExpress | избранное/заказы/скидки | планируется |
+| AliExpress | избранное/заказы/скидки | MVP (best-effort): `scripts/ali-import-*.mjs`. Высокая вероятность антибот/капчи/смены URL — используйте `--headed`, при необходимости `--url` (ваш wishlist/заказы), для тюнинга пришлите обезличенный `*-latest.json`/`debug`. |
 
 Общий CLI:
 ```powershell
-node scripts/import.mjs -m wb -k favorites --headed --add-candidates
 node scripts/import.mjs -m ozon -k favorites --headed
 node scripts/import.mjs -m ym -k favorites --headed   # wishlist: --url .../my/wishlist
-node scripts/import.mjs -m ym -k orders --headed --scrolls 8
-node scripts/import.mjs -m ym -k prices --from-favorites-latest --headed
-node scripts/import.mjs -m <wb|ozon|ym> -k normalize
-npm run import -- -m ym -k favorites --headed
+node scripts/import.mjs -m ali -k favorites --headed  # при смене URL: --url <ваш wishlist>
+node scripts/import.mjs -m ali -k orders --headed --scrolls 8
+node scripts/import.mjs -m ali -k prices --from-favorites-latest --headed
+node scripts/import.mjs -m <wb|ozon|ym|ali> -k normalize
+npm run import -- -m ali -k favorites --headed
 ```
 
 ## WB: импорт избранного
@@ -87,15 +87,16 @@ node scripts/wb-import-orders.mjs --headed --scrolls 12
 
 Скрипт открывает раздел заказов, ждёт/прокручивает страницу и сохраняет извлечённые блоки в `.local/marketplaces/wb/orders-*.json|csv` и `orders-latest.json`. Это **best-effort**: WB часто меняет вёрстку. Заказы — чувствительные данные, не коммитить.
 
-## Нормализация «публичная vs персональная» цена (WB/Ozon/ЯМ MVP)
+## Нормализация «публичная vs персональная» цена (WB/Ozon/ЯМ/Ali MVP)
 
 ```powershell
 # после снятия снимка персональных цен:
 node scripts/normalize-prices.mjs --marketplace wb
 node scripts/normalize-prices.mjs --marketplace ozon
 node scripts/normalize-prices.mjs --marketplace ym
+node scripts/normalize-prices.mjs --marketplace ali
 # или через общий CLI:
-node scripts/import.mjs -m <wb|ozon|ym> -k normalize
+node scripts/import.mjs -m <wb|ozon|ym|ali> -k normalize
 npm run normalize:prices
 ```
 
@@ -156,12 +157,33 @@ node scripts/import.mjs -m ym -k prices --urls "https://market.yandex.ru/product
 
 MVP использует эвристики `/product--.../<id>`, `/card/.../<id>`, цены в ₽; `debug.antibotHint/loginHint` помогут понять причину пустого результата. Для тюнинга пришлите обезличенный фрагмент `.local/marketplaces/ym/*-latest.json` (или `debug`).
 
+## AliExpress: импорт ЛК (MVP, best-effort)
+
+AliExpress часто показывает капчу/антибот и меняет URL/разметку. Используйте профиль Edge ЦенРадара, **`--headed`**, при необходимости передайте точный `--url` вашего wishlist/заказов. Результаты — только в `.local/marketplaces/ali/` (gitignored).
+
+```powershell
+# wishlist / избранное (URL может отличаться в вашем аккаунте)
+node scripts/import.mjs -m ali -k favorites --headed
+node scripts/import.mjs -m ali -k favorites --headed --url "https://www.aliexpress.com/p/wishlist/index.html"
+npm run import:ali:favorites -- --headed
+
+# заказы
+node scripts/import.mjs -m ali -k orders --headed --scrolls 8
+npm run import:ali:orders -- --headed
+
+# персональные цены (в ₽, если Ali показывает RUB; иначе price может быть null)
+node scripts/import.mjs -m ali -k prices --from-favorites-latest --headed
+node scripts/import.mjs -m ali -k prices --urls "https://www.aliexpress.com/item/1234567890.html" --headed
+npm run import:ali:prices -- --from-favorites-latest --headed
+```
+
+Для тюнинга пришлите обезличенный фрагмент `.local/marketplaces/ali/*-latest.json` (`debug`, `sourceUrl`, 1–2 `items[]`/`orders[]`).
+
 ## Следующие шаги (план)
 
-1. Улучшить парсинг WB/Ozon/ЯМ (избранное/заказы/цены) по реальным экспортам/DOM-снимкам после ваших прогонов.
-2. Адаптер **AliExpress** (сложность/антибот выше).
-3. Интеграция с приложением: безопасный локальный поток «импорт → выбор → добавить в трекинг» (без публикации данных ЛК).
-4. При необходимости: запись нормализованного сравнения в *приватный* локальный отчёт/UI, без записи персональных цен в `public/data`.
+1. **Тюнинг по реальным прогонам** (вы уже вошли в профили): заново запустите ЯМ избранное после фикса `13ce659`, затем проверьте Ozon/ЯМ/Али избранное+заказы+цены; пришлите обезличенные `*-latest.json`/`debug` там, где `count: 0`, мусор в `name`, нет цен или `antibotHint/loginHint`.
+2. Интеграция с приложением: безопасный локальный поток «импорт → выбор → добавить в трекинг» (без публикации данных ЛК).
+3. При необходимости: локальный отчёт/UI сравнения «публичная vs персональная» цена, без записи персональных цен в `public/data`.
 
 ## Если извлечение пустое
 

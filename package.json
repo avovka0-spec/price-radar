@@ -18,7 +18,10 @@
     "import:ozon:prices": "node scripts/ozon-import-personal-prices.mjs",
     "import:ym:favorites": "node scripts/ym-import-favorites.mjs",
     "import:ym:orders": "node scripts/ym-import-orders.mjs",
-    "import:ym:prices": "node scripts/ym-import-personal-prices.mjs"
+    "import:ym:prices": "node scripts/ym-import-personal-prices.mjs",
+    "import:ali:favorites": "node scripts/ali-import-favorites.mjs",
+    "import:ali:orders": "node scripts/ali-import-orders.mjs",
+    "import:ali:prices": "node scripts/ali-import-personal-prices.mjs"
   },
   "dependencies": {
     "next": "^14.2.35",

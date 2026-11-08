@@ -77,6 +77,17 @@ const ROUTES = {
     normalize: "scripts/normalize-prices.mjs",
     norm: "scripts/normalize-prices.mjs",
   },
+  ali: {
+    favorites: "scripts/ali-import-favorites.mjs",
+    favourite: "scripts/ali-import-favorites.mjs",
+    wishlist: "scripts/ali-import-favorites.mjs",
+    orders: "scripts/ali-import-orders.mjs",
+    prices: "scripts/ali-import-personal-prices.mjs",
+    "personal-prices": "scripts/ali-import-personal-prices.mjs",
+    personal: "scripts/ali-import-personal-prices.mjs",
+    normalize: "scripts/normalize-prices.mjs",
+    norm: "scripts/normalize-prices.mjs",
+  },
 };
 
 function help(code = 0) {
@@ -90,15 +101,15 @@ function help(code = 0) {
     "  wb / wildberries      — реализовано: favorites, orders, prices, normalize",
     "  ozon                  — MVP (best-effort): favorites, orders, prices, normalize",
     "  ym / yandex-market    — MVP (best-effort): favorites/wishlist, orders, prices, normalize",
-    "  ali / aliexpress      — планируется",
+    "  ali / aliexpress      — MVP (best-effort): favorites/wishlist, orders, prices, normalize",
     "",
     "Примеры:",
-    "  node scripts/import.mjs -m wb -k favorites --headed --add-candidates",
     "  node scripts/import.mjs -m ozon -k favorites --headed",
     "  node scripts/import.mjs -m ym -k favorites --headed  (или --url .../my/wishlist)",
-    "  node scripts/import.mjs -m ym -k orders --headed --scrolls 8",
-    "  node scripts/import.mjs -m ym -k prices --from-favorites-latest --headed",
-    "  node scripts/import.mjs -m ym -k normalize",
+    "  node scripts/import.mjs -m ali -k favorites --headed  (или --url <ваш wishlist>)",
+    "  node scripts/import.mjs -m ali -k orders --headed --scrolls 8",
+    "  node scripts/import.mjs -m ali -k prices --from-favorites-latest --headed",
+    "  node scripts/import.mjs -m <wb|ozon|ym|ali> -k normalize",
     "",
     "Переменные: PRICERADAR_EDGE_PROFILE, PRICERADAR_BROWSER_HEADLESS (эксперимент).",
   ];
