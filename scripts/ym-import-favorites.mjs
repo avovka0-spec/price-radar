@@ -41,6 +41,7 @@ async function extract(page){ return await page.evaluate(()=>{
     t=t.replace(/^\d+\s*%\s*(ПРОМОКОД|скидк[аи])\s*/iu,"").replace(/^(ПРОМОКОД|Распродажа|Хит)\s*/iu,"").trim();
     const cut=t.search(/Цена с картой|Яндекс Пэй|\bПэй\b|\d[\d\s\u00a0]*\s*₽|Рейтинг товара|Оценок|купили|доставк|Из-за рубежа/i);
     if(cut>8) t=t.slice(0,cut).trim();
+    t=t.replace(/\s*(Осталось|Осталась|Осталос[ья]|Заканчивается|Последни[ейя])\s+\d+\s*(шт\.?|штук[аи]?|ед\.?)\s*$/iu,"").trim();
     return isGoodName(t)?t:"";
   };
   const pickName=(card,a,href,rawText)=>{
