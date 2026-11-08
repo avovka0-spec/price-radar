@@ -53,41 +53,74 @@ function parsePrice(text) {
   return m ? Number(m[1].replace(/[^\d]/g, "")) : null;
 }
 
+function isUiNoise(text) {
+  const t = String(text || "");
+  if (/ВБ\d|Язык\s*RU|Валюта\s*RUB|Российский рубль|Белорусский рубль|Казахстанский тенге/i.test(t)) return true;
+  if (t.length < 20) return true;
+  return false;
+}
+
+function normalizeOrder(o) {
+  const text = String(o.text || "").replace(/\s+/g, " ").trim();
+  const skus = [...new Set((o.skus || []).filter(Boolean))];
+  const links = [...new Set((o.links || []).filter(Boolean))];
+  const prices = [...new Set((o.pricesText || []).map(parsePrice).filter((n) => Number.isFinite(n)))];
+  const dates = (o.dates || []).map((d) => String(d).trim()).filter(Boolean);
+  // Название/статус: убираем явные цены, SKU и длинные служебные префиксы
+  let label = text
+    .replace(/https?:\/\/\S+/g, " ")
+    .replace(/\d[\d\s\u00a0]*\s*₽/g, " ")
+    .replace(/\b\d{7,}\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  // WB часто склеивает "696 ₽НазваниеСтатусДата"
+  label = label.replace(/^\d+\s*ВБ\d+\s*/i, "").slice(0, 220);
+  const status = (text.match(/Отмена магазином|Получен|Доставлен|Отмен[её]н|В пути|Готов к выдаче|Собирается|Возврат/iu) || [""])[0];
+  return {
+    ...o,
+    text,
+    label,
+    status,
+    skus,
+    links,
+    dates,
+    prices,
+    itemPrice: prices.length ? Math.min(...prices) : null,
+    totalGuess: prices.length ? Math.max(...prices) : null,
+  };
+}
+
 async function extractOrders(page) {
   return await page.evaluate(() => {
     const norm = (s) => String(s || "").replace(/\s+/g, " ").trim();
     const results = [];
     const seen = new Set();
 
-    // Эвристика: блоки, похожие на заказы/доставки/сборки (WB меняет классы).
-    const candidates = Array.from(document.querySelectorAll(
-      "section, article, li, div"
-    )).filter((el) => {
+    // Эвристика: блоки, похожие на заказы/позиции (WB меняет классы).
+    const candidates = Array.from(document.querySelectorAll("section, article, li, div")).filter((el) => {
       const t = norm(el.textContent);
-      if (t.length < 30 || t.length > 4000) return false;
-      return /заказ|сборк|достав|получ|отмен|руб|₽/i.test(t) && /₽|\d{2}\.\d{2}|\d{4}/.test(t);
+      if (t.length < 25 || t.length > 3000) return false;
+      if (/ВБ\d+|ЯзыкRU|ВалютаRUB|Российский рубль|Белорусский рубль/i.test(t.replace(/\s/g, ""))) return false;
+      const hasCatalog = !!el.querySelector('a[href*="/catalog/"]');
+      const hasPrice = /₽/.test(t);
+      const hasStatus = /Получен|Доставлен|Отмена|Отменён|В пути|Готов к выдаче|Собирается|Возврат/i.test(t);
+      return (hasCatalog && (hasPrice || hasStatus)) || (hasStatus && hasPrice);
     });
 
     for (const el of candidates) {
-      const text = norm(el.textContent).slice(0, 2000);
-      const key = text.slice(0, 180);
+      const text = norm(el.textContent).slice(0, 1500);
+      // предпочитаем более специфичные (не огромные контейнеры)
+      if (el.querySelectorAll('a[href*="/catalog/"]').length > 6) continue;
+      const links = Array.from(el.querySelectorAll('a[href*="/catalog/"]')).map((a) => a.href).filter((v, i, a) => a.indexOf(v) === i).slice(0, 10);
+      const skus = [...new Set(links.map((h) => (h.match(/\/catalog\/(\d{5,})\//) || [])[1]).filter(Boolean))];
+      const prices = (text.match(/(\d[\d\s\u00a0]*)\s*₽/g) || []).slice(0, 8);
+      const dates = (text.match(/\d{1,2}\s+[а-яё]{3,}\.?(?:\s+\d{4})?|\d{2}\.\d{2}\.\d{2,4}/giu) || []).slice(0, 8);
+      if (!skus.length && !/Получен|Доставлен|Отмена|В пути|Готов к выдаче|Собирается|Возврат/i.test(text)) continue;
+      const key = (skus.join(",") || "") + "|" + (prices[0] || "") + "|" + text.slice(0, 90);
       if (seen.has(key)) continue;
-      // пропускаем слишком общие контейнеры, если внутри есть более специфичные
-      if (el.querySelectorAll("section, article, li").length > 8) continue;
-      const links = Array.from(el.querySelectorAll('a[href*="/catalog/"]')).map((a) => a.href).filter((v,i,a)=>a.indexOf(v)===i).slice(0, 20);
-      const prices = (text.match(/(\d[\d\s\u00a0]*)\s*₽/g) || []).slice(0, 10);
-      const dates = (text.match(/\d{1,2}\s+[а-я]{3,}\.?|\d{2}\.\d{2}\.\d{2,4}/gi) || []).slice(0, 6);
-      const skus = links.map((h) => (h.match(/\/catalog\/(\d{5,})\//) || [])[1]).filter(Boolean);
-      if (!prices.length && !skus.length && !dates.length) continue;
-      results.push({
-        text,
-        links,
-        skus: [...new Set(skus)],
-        pricesText: prices,
-        dates,
-      });
       seen.add(key);
-      if (results.length >= 120) break;
+      results.push({ text, links, skus, pricesText: prices, dates });
+      if (results.length >= 200) break;
     }
 
     return {
@@ -128,11 +161,21 @@ async function main() {
     await page.waitForTimeout(1000);
 
     const snap = await extractOrders(page);
-    const orders = (snap.orders || []).map((o, idx) => ({
+    const normalized = (snap.orders || []).map(normalizeOrder).filter((o) => !isUiNoise(o.text));
+    // Дедуп: предпочитаем запись с SKU/ссылкой и более длинным описанием
+    const byKey = new Map();
+    for (const o of normalized) {
+      const key = o.skus[0] ? `sku:${o.skus[0]}:${o.prices.join(",")}:${o.status}` : `text:${o.text.slice(0, 120)}`;
+      const prev = byKey.get(key);
+      if (!prev || (o.skus.length > prev.skus.length) || (o.links.length > prev.links.length) || (o.text.length > prev.text.length)) {
+        byKey.set(key, o);
+      }
+    }
+    const orders = [...byKey.values()].map((o, idx) => ({
       index: idx + 1,
+      marketplace: "wb",
+      kind: "order-item",
       ...o,
-      prices: (o.pricesText || []).map(parsePrice).filter(Boolean),
-      totalGuess: (() => { const p = (o.pricesText || []).map(parsePrice).filter(Boolean); return p.length ? Math.max(...p) : null; })(),
       importedAt: new Date().toISOString(),
     }));
 
