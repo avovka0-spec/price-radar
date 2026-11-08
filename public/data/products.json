@@ -9,7 +9,7 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1793978460143,
-    "lastCheckedAt": 1794157062942,
+    "lastCheckedAt": 1794164263432,
     "currentPrice": 290144
   },
   {
@@ -23,7 +23,7 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794080011028,
-    "lastCheckedAt": 1794157069281,
+    "lastCheckedAt": 1794164270030,
     "currentPrice": 312731
   },
   {
@@ -37,7 +37,7 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794153434621,
-    "lastCheckedAt": 1794157075713,
+    "lastCheckedAt": 1794164276569,
     "currentPrice": 144143
   }
 ]
