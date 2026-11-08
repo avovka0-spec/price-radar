@@ -59,7 +59,8 @@ $env:PRICE_RADAR_MINIMIZED='0'; node scripts/check-prices-local.mjs
 
 ```powershell
 $node = (Get-Command node).Source
-$action = New-ScheduledTaskAction -Execute $node -Argument "scripts/check-prices-local.mjs" -WorkingDirectory "D:\Prog_dev\ai\price-radar"
+# conhost --headless предотвращает мигание консольного окна при запуске
+$action = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\conhost.exe" -Argument "--headless -- `"$node`" scripts/check-prices-local.mjs" -WorkingDirectory "D:\Prog_dev\ai\price-radar"
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(1) -RepetitionInterval (New-TimeSpan -Hours 2) -RepetitionDuration (New-TimeSpan -Days 3650)
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -WakeToRun
 Register-ScheduledTask -TaskName "PriceRadarLocal" -Action $action -Trigger $trigger -Settings $settings -Description "ЦенРадар: локальная проверка цен WB" -Force

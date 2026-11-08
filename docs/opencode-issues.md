@@ -45,7 +45,8 @@ node scripts/opencode-issues-watcher.mjs             # обработать од
 
 ```powershell
 $node = (Get-Command node).Source
-$action = New-ScheduledTaskAction -Execute $node -Argument "scripts/opencode-issues-watcher.mjs" -WorkingDirectory "D:\Prog_dev\ai\price-radar"
+# conhost --headless предотвращает мигание консольного окна каждые 5 минут
+$action = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\conhost.exe" -Argument "--headless -- `"$node`" scripts/opencode-issues-watcher.mjs" -WorkingDirectory "D:\Prog_dev\ai\price-radar"
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(2) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 3650)
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew
 Register-ScheduledTask -TaskName "OpenCodeTelegramIssues" -Action $action -Trigger $trigger -Settings $settings -Description "ЦенРадар/OpenCode: приём telegram-task Issues и запуск opencode" -Force
