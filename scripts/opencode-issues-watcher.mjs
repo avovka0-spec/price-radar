@@ -82,7 +82,7 @@ function getGhTokenFromGit() {
   }
 }
 
-function http(method, url, headers, body) {
+function http(method, url, headers, body, timeoutMs = 30000) {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
     const req = https.request(
@@ -106,6 +106,9 @@ function http(method, url, headers, body) {
         });
       },
     );
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new Error(`timeout ${timeoutMs}ms`));
+    });
     req.on("error", reject);
     if (body) req.write(body);
     req.end();
@@ -183,36 +186,47 @@ function findOpencodeCli() {
 }
 
 async function notify(token, owner, repo, chatId, text) {
-  const body = JSON.stringify({ ref: "main", inputs: { chat_id: String(chatId), text } });
-  const r = await http(
-    "POST",
-    `https://api.github.com/repos/${owner}/${repo}/actions/workflows/telegram-notify.yml/dispatches`,
-    ghHeaders(token),
-    body,
-  );
-  if (r.status === 204) return;
-  if ([403, 404, 422].includes(r.status)) {
-    const f = await http(
+  try {
+    const body = JSON.stringify({ ref: "main", inputs: { chat_id: String(chatId), text } });
+    const r = await http(
       "POST",
-      `https://api.github.com/repos/${owner}/${repo}/dispatches`,
+      `https://api.github.com/repos/${owner}/${repo}/actions/workflows/telegram-notify.yml/dispatches`,
       ghHeaders(token),
-      JSON.stringify({ event_type: "telegram-notify", client_payload: { chat_id: String(chatId), text } }),
+      body,
+      20000,
     );
-    if (f.status !== 204) log(`notify fallback failed: ${f.status} ${f.body.slice(0, 200)}`);
-    return;
+    if (r.status === 204) return;
+    if ([403, 404, 422].includes(r.status)) {
+      const f = await http(
+        "POST",
+        `https://api.github.com/repos/${owner}/${repo}/dispatches`,
+        ghHeaders(token),
+        JSON.stringify({ event_type: "telegram-notify", client_payload: { chat_id: String(chatId), text } }),
+        20000,
+      );
+      if (f.status !== 204) log(`notify fallback failed: ${f.status} ${f.body.slice(0, 200)}`);
+      return;
+    }
+    log(`notify failed: ${r.status} ${r.body.slice(0, 200)}`);
+  } catch (e) {
+    log(`notify error: ${e && e.message ? e.message : e}`);
   }
-  log(`notify failed: ${r.status} ${r.body.slice(0, 200)}`);
 }
 
 async function commentIssue(token, owner, repo, number, body) {
-  const r = await http(
-    "POST",
-    `https://api.github.com/repos/${owner}/${repo}/issues/${number}/comments`,
-    ghHeaders(token),
-    JSON.stringify({ body }),
-  );
-  if (r.status < 200 || r.status >= 300) {
-    log(`comment #${number} failed: ${r.status} ${r.body.slice(0, 200)}`);
+  try {
+    const r = await http(
+      "POST",
+      `https://api.github.com/repos/${owner}/${repo}/issues/${number}/comments`,
+      ghHeaders(token),
+      JSON.stringify({ body }),
+      20000,
+    );
+    if (r.status < 200 || r.status >= 300) {
+      log(`comment #${number} failed: ${r.status} ${r.body.slice(0, 200)}`);
+    }
+  } catch (e) {
+    log(`comment #${number} error: ${e && e.message ? e.message : e}`);
   }
 }
 
@@ -222,6 +236,7 @@ async function closeIssue(token, owner, repo, number) {
     `https://api.github.com/repos/${owner}/${repo}/issues/${number}`,
     ghHeaders(token),
     JSON.stringify({ state: "closed", state_reason: "completed" }),
+    20000,
   );
   if (r.status < 200 || r.status >= 300) {
     throw new Error(`close #${number} failed: ${r.status} ${r.body.slice(0, 200)}`);
