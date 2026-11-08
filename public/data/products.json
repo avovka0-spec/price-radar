@@ -9,19 +9,21 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1793978460143,
-    "lastCheckedAt": 1794077863707,
+    "lastCheckedAt": 1794132514032,
     "currentPrice": 299118
   },
   {
     "id": "e64b2f25-f835-4da6-af73-01860f4cce44",
     "sku": "1704280114",
     "url": "https://www.wildberries.ru/catalog/1704280114/detail.aspx",
-    "name": "— название придёт после следующей проверки",
+    "name": "SZBOX Ryzen AI MAX 395 Мини-ПК Gaming 128 ГБ LPDDR5X 128GB Нет бренда",
     "brand": "",
     "marketplace": "wb",
-    "image": "https://basket-16.wbbasket.ru/vol17042/part1704280/1704280114/images/c246x328/1.webp",
+    "image": "https://basket-50.wbbasket.ru/vol17042/part1704280/1704280114/images/big/1.webp?picsUpdate=0",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794080011028
+    "addedAt": 1794080011028,
+    "lastCheckedAt": 1794132517983,
+    "currentPrice": 322404
   }
 ]
