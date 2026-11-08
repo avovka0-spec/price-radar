@@ -145,6 +145,8 @@ price-radar/
 │   ├── check-prices-local.mjs  # локальный воркер цен на домашнем ПК
 │   ├── opencode-issues-watcher.mjs  # автоприём telegram-task Issues → OpenCode
 │   ├── wb-import-favorites.mjs # локальный импорт избранного WB (MVP, .local/)
+│   ├── wb-import-orders.mjs    # локальный импорт заказов WB (MVP, .local/)
+│   ├── wb-import-personal-prices.mjs # снимок цен из залогиненного профиля WB
 │   ├── wb-relay.mjs        # WB-прокси для запуска на RU VPS
 │   ├── telegram-to-issues.mjs  # опрос бота → Issues
 │   ├── notify-telegram.mjs # статусы/отчёты агента → Telegram
