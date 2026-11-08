@@ -42,6 +42,14 @@ WB/некоторые сайты блокируют настоящий `headless
 | Яндекс Маркет | избранное/заказы/скидки | планируется |
 | AliExpress | избранное/заказы/скидки | планируется |
 
+Общий CLI:
+```powershell
+node scripts/import.mjs -m wb -k favorites --headed --add-candidates
+node scripts/import.mjs -m wb -k orders --headed --scrolls 12
+node scripts/import.mjs -m wb -k prices --from-products --limit 20
+npm run import -- -m wb -k favorites --headed
+```
+
 ## WB: импорт избранного
 
 Требования: Node.js, `playwright-core`, установленный Edge. Используется persistent profile `.local/edge-profile` (как у `check-prices-local.mjs`).
@@ -91,10 +99,9 @@ node scripts/wb-import-personal-prices.mjs --from-favorites-latest --headed
 ## Следующие шаги (план)
 
 1. Улучшить парсинг WB (избранное/заказы/цены) по реальным экспортам/DOM-снимкам после ваших прогонов.
-2. Ozon / Яндекс Маркет / AliExpress: отдельные адаптеры; для Ozon/ЯМ ожидать больше антибот-ограничений.
-3. Общий CLI: `import --marketplace wb --kind favorites|orders|prices`.
+2. Нормализация «персональная цена vs публичная цена» в модели товара (отдельное поле/источник, без утечки ЛК в публичные данные).
+3. Адаптеры **Ozon → Яндекс Маркет → AliExpress** (сложность/антибот выше).
 4. Интеграция с приложением: безопасный локальный поток «импорт → выбор → добавить в трекинг» (без публикации данных ЛК).
-5. Нормализация «персональная цена vs публичная цена» в модели товара (отдельное поле/источник, без утечки ЛК в публичные данные).
 
 ## Если извлечение пустое
 
