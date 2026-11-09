@@ -77,5 +77,16 @@
     "notify": true,
     "addedAt": 1794249241517,
     "lastCheckedAt": 1794250700498
+  },
+  {
+    "id": "76fed17e-d3ee-409d-801d-ef6529b0d6f2",
+    "sku": "ozon:t:7GdMpjM",
+    "url": "https://ozon.ru/t/7GdMpjM",
+    "name": "Товар Ozon",
+    "brand": "",
+    "marketplace": "ozon",
+    "thresholdPct": 10,
+    "notify": true,
+    "addedAt": 1794252181816
   }
 ]
