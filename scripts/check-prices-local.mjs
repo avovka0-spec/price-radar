@@ -540,14 +540,74 @@ async function sendPush(notes, removed, subs, vapidReady) {
     await sendPush(notifyQueue, deadSubs, subs, vapidReady);
     await sendTelegramAlerts(notifyQueue);
 
+    // Скрейпинг занимает минуты: за это время пользователь мог удалить/добавить товары
+    // через PWA (отдельные коммиты в GitHub). Делаем pull и мерджим результаты проверки
+    // в свежие данные, НЕ воскрешая удалённые товары и не затирая параллельные правки.
+    try {
+      git(["pull", "--rebase", "--autostash", "origin", "main"]);
+    } catch (e) {
+      log(`git pull before save error: ${e && e.stderr ? e.stderr : e && e.message ? e.message : e}`);
+    }
+    let freshProducts = products;
+    let freshHistory = history;
+    try { freshProducts = JSON.parse(readFileSync(path.join(DATA, "products.json"), "utf8")); } catch {}
+    try { freshHistory = JSON.parse(readFileSync(path.join(DATA, "history.json"), "utf8")); } catch {}
+
+    const checkedBySku = new Map(products.map((p) => [String(p.sku), p]));
+    const checkerFields = (u) => {
+      const out = {};
+      for (const k of ["name","brand","image","marketplace","currentPrice","lastCheckedAt","lastNotifiedAt","lastNotifyPrice","url","sku","id"]) {
+        if (u[k] !== undefined) out[k] = u[k];
+      }
+      // Настройки пользователя (targetPrice/thresholdPct/notify/addedAt) берём из fresh, если есть,
+      // чтобы не затереть изменения из UI, сделанные параллельно.
+      return out;
+    };
+    const mergedProducts = (Array.isArray(freshProducts) ? freshProducts : []).map((fp) => {
+      const u = checkedBySku.get(String(fp.sku));
+      return u ? { ...fp, ...checkerFields(u) } : fp;
+    });
+    const mergedSkus = new Set(mergedProducts.map((p) => String(p.sku)));
+
+    const mergedHistory = { ...(freshHistory && typeof freshHistory === "object" ? freshHistory : {}) };
+    const mergePoints = (a, b) => {
+      const out = [];
+      const seen = new Set();
+      for (const pt of [...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])]) {
+        if (!pt || typeof pt.t !== "number") continue;
+        const k = `${pt.t}|${pt.p}|${pt.m ? 1 : 0}`;
+        if (seen.has(k)) continue;
+        seen.add(k);
+        out.push(pt);
+      }
+      out.sort((x, y) => x.t - y.t);
+      while (out.length && Date.now() - out[0].t > MAX_AGE) out.shift();
+      return out;
+    };
+    // Обновляем историю только для товаров, которые всё ещё существуют.
+    // Мерджим точки (дедуп по t+p+m), чтобы не потерять ручную точку, добавленную в окно гонки,
+    // и при этом сохранить авто-точки этого прогона. Удаление товара уважаем.
+    for (const [sku, pts] of Object.entries(history || {})) {
+      if (mergedSkus.has(String(sku))) mergedHistory[sku] = mergePoints(mergedHistory[sku], pts);
+    }
+    for (const sku of Object.keys(mergedHistory)) {
+      if (!mergedSkus.has(String(sku))) delete mergedHistory[sku];
+    }
+    if (mergedProducts.length !== products.length) {
+      log(`merge: products ${products.length} -> ${mergedProducts.length} (учтены параллельные удаления/добавления)`);
+      changed = true;
+    }
+
     if (deadSubs.length) {
-      subs = subs.filter((s) => !deadSubs.includes(s.endpoint));
+      let freshSubs = subs;
+      try { freshSubs = JSON.parse(readFileSync(path.join(DATA, "push-subscriptions.json"), "utf8")); } catch {}
+      subs = (Array.isArray(freshSubs) ? freshSubs : subs).filter((s) => !deadSubs.includes(s.endpoint));
       writeFileSync(path.join(DATA, "push-subscriptions.json"), JSON.stringify(subs, null, 2));
       changed = true;
     }
 
-    writeFileSync(path.join(DATA, "products.json"), JSON.stringify(products, null, 2));
-    writeFileSync(path.join(DATA, "history.json"), JSON.stringify(history, null, 2));
+    writeFileSync(path.join(DATA, "products.json"), JSON.stringify(mergedProducts, null, 2));
+    writeFileSync(path.join(DATA, "history.json"), JSON.stringify(mergedHistory, null, 2));
     log(`done, changes: ${changed}`);
 
     try {

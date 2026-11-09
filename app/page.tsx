@@ -203,12 +203,15 @@ export default function Page() {
     try {
       await updateRepoJson<Product[]>(cfg, "public/data/products.json", "Настройки товаров", (cur) => {
         const fresh = Array.isArray(cur) ? cur : (cur as any)?.products ?? next;
-        // применяем локальные правки поверх свежих данных, чтобы не потерять параллельные обновления цен
+        // Применяем локальные правки настроек поверх свежих данных, чтобы не потерять
+        // параллельные обновления цен. ВАЖНО: не добавляем товары из локального снапшота,
+        // которых нет в свежих данных репозитория — иначе можно «воскресить» товар,
+        // удалённый пользователем (удаление идёт отдельным коммитом/очередью).
         const localBySku = new Map(next.map((p) => [p.sku, p]));
         return fresh.map((p: Product) => {
           const l = localBySku.get(p.sku);
           return l ? { ...p, targetPrice: l.targetPrice, thresholdPct: l.thresholdPct, notify: l.notify } : p;
-        }).concat(next.filter((p) => !fresh.some((f: Product) => f.sku === p.sku)));
+        });
       });
     } catch { /* тихо: не мешаем UX, при следующем изменении повторим */ }
   }, [cfg]);
