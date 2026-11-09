@@ -9,7 +9,7 @@
     "thresholdPct": 3,
     "notify": true,
     "addedAt": 1793978460143,
-    "lastCheckedAt": 1794166053209,
+    "lastCheckedAt": 1794209471940,
     "currentPrice": 290144,
     "targetPrice": 280000
   },
@@ -24,7 +24,7 @@
     "thresholdPct": 3,
     "notify": true,
     "addedAt": 1794080011028,
-    "lastCheckedAt": 1794164270030,
+    "lastCheckedAt": 1794209478254,
     "currentPrice": 312731,
     "targetPrice": 300000
   },
@@ -39,7 +39,7 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794153434621,
-    "lastCheckedAt": 1794164276569,
+    "lastCheckedAt": 1794209484624,
     "currentPrice": 144143
   },
   {
@@ -49,10 +49,12 @@
     "name": "Мобильный телефон i16 Pro, черный",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-v/wc500/7197343231.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-v/c600/7197343231.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209491834,
+    "currentPrice": 1317
   },
   {
     "id": "fa4a1200-efe3-48ce-b151-9e7e7dbc7666",
@@ -61,58 +63,68 @@
     "name": "Эксклюзивный светодиодный ночник с проекцией звездного неба и луны, оснащенный 3D эффектом и логотипом для оформления спальни, детской или романтического интерьера",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-k/wc500/10643935052.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-k/c600/10643935052.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209500822,
+    "currentPrice": 161
   },
   {
     "id": "671b7d82-4760-4b76-94b5-f4b61552a98f",
     "sku": "ozon:1721723071",
     "url": "https://www.ozon.ru/product/saundbar-xiaomi-redmi-soundbar-asb02a-versiya-cn-kolonka-s-podsvetkoy-i-mikrofonom-dlya-1721723071/",
-    "name": "Распродажа 222 ₽529 ₽529 ₽−58%839 ед осталосьЭксклюзивный светодиодный ночник с проекцией звездного неба и луны, оснащенный 3D эффектом и логотипом для оформления спальни, детской или романтического интерьера 4.592 отзыва С 23 ноября",
+    "name": "Саундбар - купить на OZON",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-g/wc500/12336596224.jpg",
+    "image": "https://ir.ozone.ru/s3/cms/logo/og_ozon_ru.png",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209510183,
+    "currentPrice": 3061
   },
   {
     "id": "2d1a6965-8824-4724-9bcb-e4ad8c8f2718",
     "sku": "ozon:3121651640",
     "url": "https://www.ozon.ru/product/saundbar-xiaomi-soundbar-2-0-eu-s22e-qbh4286eu-3121651640/",
-    "name": "Стало дешевлеНабор столовых приборов С 24 ноября Нет в наличии Пакеты для вакууматора рифленые, вакуумные пакеты для продуктов 17х25 см Похожие Нашли похожий 591 ₽7 и 1 ₽Пакеты для вакууматора рифленые, вакуумные пакеты для продуктов 17х25 ",
+    "name": "Саундбар - купить на OZON",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-b/wc500/8800793939.jpg",
+    "image": "https://ir.ozone.ru/s3/cms/logo/og_ozon_ru.png",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209519372,
+    "currentPrice": 4990
   },
   {
     "id": "1c18073a-500e-40fd-9752-3ae0bd11c988",
     "sku": "ozon:3033326745",
     "url": "https://www.ozon.ru/product/nabor-stolovyh-priborov-3033326745/",
-    "name": "Стало дешевлеНабор столовых приборов С 24 ноября",
+    "name": "Набор столовых приборов",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-a/wc500/7722452710.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-a/c600/7722452710.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209528317,
+    "currentPrice": 223
   },
   {
     "id": "d135d541-c700-414a-a6ab-61436d31a2c8",
     "sku": "ozon:853794713",
     "url": "https://www.ozon.ru/product/pakety-dlya-vakuumatora-riflenye-vakuumnye-pakety-dlya-produktov-17h25-sm-853794713/",
-    "name": "Стало дешевлеНабор столовых приборов С 24 ноября Нет в наличии Пакеты для вакууматора рифленые, вакуумные пакеты для продуктов 17х25 см Похожие Нашли похожий 591 ₽7 и 1 ₽Пакеты для вакууматора рифленые, вакуумные пакеты для продуктов 17х25 ",
+    "name": "Аксессуар для вакууматора - купить на OZON",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-b/wc500/8800793939.jpg",
+    "image": "https://ir.ozone.ru/s3/cms/logo/og_ozon_ru.png",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209537730,
+    "currentPrice": 180
   },
   {
     "id": "958a313f-6fde-4458-a6d6-c29901b62fed",
@@ -121,10 +133,12 @@
     "name": "Пакеты для вакууматора рифленые, вакуумные пакеты для продуктов 17х25 см",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-q/wc500/8594120150.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-q/c600/8594120150.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209546579,
+    "currentPrice": 194
   },
   {
     "id": "c7863715-e1fc-4954-af29-1dc50e4431fe",
@@ -133,10 +147,12 @@
     "name": "Таз для варки варенья нержавеющая сталь 1 шт",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-y/wc500/7513942858.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-y/wc1000/c600/7513942858.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209555505,
+    "currentPrice": 75
   },
   {
     "id": "518953de-2d80-4372-b4d7-ccf84861cc18",
@@ -145,10 +161,12 @@
     "name": "Корпус Lian-Li Lancool 217 черный без БП ATX 7x120mm 3x140mm 2xUSB3.0 audio bott PSU",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-1/wc500/13985874613.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-1/c600/13985874613.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209564343,
+    "currentPrice": 1504
   },
   {
     "id": "fc926e2b-cfed-4e9e-9be3-6207cca72ac6",
@@ -157,10 +175,12 @@
     "name": "Материнская плата MSI B550 GAMING WIFI6E Soc-AM4 AMD B550 4xDDR4 ATX AC 97 8ch(7.1) GbLAN RAID+HDMI+DP",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-d/wc500/12923181949.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-d/c600/12923181949.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209573215,
+    "currentPrice": 4940
   },
   {
     "id": "6f9689ec-610a-4f5d-88c5-e0f20370b76c",
@@ -169,10 +189,12 @@
     "name": "Игровая клавиатура Lenovo Aurora GK10 Lite механическая беспроводная Bluetooth 5.2 RGB 98 клавиш для ПК и ноутбука",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-9/wc500/14663592045.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-9/c600/14663592045.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209582221,
+    "currentPrice": 2962
   },
   {
     "id": "9f9a75e1-e06b-4dab-b259-8f2fdc24fad0",
@@ -181,10 +203,12 @@
     "name": "Туристический балон 520 мл 1 шт",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-c/wc500/20113907340.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-c/c600/20113907340.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209591099,
+    "currentPrice": 205
   },
   {
     "id": "6ff77102-d12e-4b3c-83c3-e6cf3e271f65",
@@ -193,22 +217,26 @@
     "name": "Повторитель беспроводного сигнала KEENETIC Netcraze Buddy 6, белый nc-3411",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-5/wc500/12667582877.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-5/c600/12667582877.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209599993,
+    "currentPrice": 1566
   },
   {
     "id": "bf1523de-f5e2-4936-87c7-c9cced4d2b7f",
     "sku": "ozon:2378924938",
     "url": "https://www.ozon.ru/product/sverhtonkiy-chernyy-svetilnik-nochnoy-svetilnik-rechargeable-sensor-night-light-20cm-2378924938/",
-    "name": "Сверхтонкий черный Светильник Ночной светильник Rechargeable Sensor Night light,20cm",
+    "name": "Настольный светильник - купить на OZON",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-8/wc500/7660778912.jpg",
+    "image": "https://ir.ozone.ru/s3/cms/logo/og_ozon_ru.png",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209609295,
+    "currentPrice": 204
   },
   {
     "id": "92045c8a-1e83-4805-a8b5-8ea93feb0fc7",
@@ -217,10 +245,12 @@
     "name": "Материнская плата GIGABYTE X870 GAMING WIFI6, AM5, DDR5, WiFi, ATX",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-n/wc500/20153842619.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-n/c600/20153842619.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209618224,
+    "currentPrice": 9266
   },
   {
     "id": "c2edf242-1061-4cac-af73-4f51220b1a68",
@@ -229,10 +259,12 @@
     "name": "ICEBOOK Мини-ПК (AMD Ryzen AI 9 HX 370, RAM 32 ГБ, SSD 1024 ГБ, AMD Radeon 890M, Windows 11 Pro), черно-серый",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-6/wc500/20796067014.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-6/c600/20796067014.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209627112,
+    "currentPrice": 69934
   },
   {
     "id": "05d88f3c-3220-4a9f-9947-c02f19af6935",
@@ -241,10 +273,12 @@
     "name": "Брикеты для розжига мангалов, барбекю, каминов и печей (10 плиток по 48 шт) 480 шт",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-y/wc500/11097383542.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-y/c600/11097383542.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209635945,
+    "currentPrice": 190
   },
   {
     "id": "f586439d-36e2-4948-b237-61334e679163",
@@ -253,10 +287,12 @@
     "name": "ASUS Видеокарта GeForce RTX 5080 ROG ASTRAL WHITE OC, GDDR7, 256bit, 3xDP, 2xHDMI, 16 ГБ (ROG-ASTRAL-RTX5080-O16G-WHITE)",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-t/wc500/20122156217.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-t/c600/20122156217.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209644820,
+    "currentPrice": 2962
   },
   {
     "id": "c1b67d0e-ca70-4c58-87bd-2ed8ece7876a",
@@ -265,10 +301,12 @@
     "name": "Пресс для вина, для сока BIOMIR Зеленый 5 л. винтовой с кожухом, соковыжималка для отжима из ягод, фруктов, овощей, яблок",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-u/wc500/7752918774.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-u/c600/7752918774.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209653690,
+    "currentPrice": 218
   },
   {
     "id": "3688cfaf-b61e-4b11-8185-befacd5bcd7e",
@@ -277,10 +315,12 @@
     "name": "Gigabyte B550 X GAMING WF7 AMD B550 AM4 DDR4 Материнская плата",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-u/wc500/14289506418.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-u/c600/14289506418.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209662554,
+    "currentPrice": 8491
   },
   {
     "id": "54e3bf2e-bdeb-4788-adde-be79cbe0958f",
@@ -289,10 +329,12 @@
     "name": "Натуральные брикеты для розжига дров и угля (24 шт.)",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-9/wc500/14327615601.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-9/c600/14327615601.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209671405,
+    "currentPrice": 95
   },
   {
     "id": "101fd8af-3ffd-465c-b0b0-88f6d31c24c6",
@@ -301,10 +343,12 @@
     "name": "Gigabyte Видеокарта AORUS GeForce RTX 5080 INFINITY, GDDR7, 256 bit, 16 ГБ (GV-N5080AORUS IF-16GD)",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-4/wc500/20122156264.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-4/c600/20122156264.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209680261,
+    "currentPrice": 8491
   },
   {
     "id": "b97ca3e0-8e6a-4c26-81e8-a1a69ab04519",
@@ -313,10 +357,12 @@
     "name": "Термос 1.4 л, холод 12 ч, тепло 12 ч, для еды, вакуумный, с кнопкой, светло-зеленый",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-r/wc500/20249523063.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-r/c600/20249523063.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209689245,
+    "currentPrice": 365
   },
   {
     "id": "2f2c1dc7-e9c5-48ca-a269-dd975d3aea4d",
@@ -325,10 +371,12 @@
     "name": "Пакеты фасовочные 30х40 см, 1 шт, 15 мкм",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-g/wc500/13016193748.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-g/c600/13016193748.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209698208,
+    "currentPrice": 135
   },
   {
     "id": "7809d4c3-885f-42f8-bff6-9a4e635e12ba",
@@ -337,9 +385,11 @@
     "name": "Система водяного охлаждения DeepCool LE360 V2 ARGB 250Вт 3x120мм LGA 1700/1851/AM5 R-LE360-BKAMMC-G-2",
     "brand": "",
     "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-d/wc500/11710241797.jpg",
+    "image": "https://ir.ozone.ru/s3/multimedia-1-d/c600/11710241797.jpg",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794152869427
+    "addedAt": 1794152869427,
+    "lastCheckedAt": 1794209707051,
+    "currentPrice": 2126
   }
 ]
