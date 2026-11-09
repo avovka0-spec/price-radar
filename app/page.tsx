@@ -9,6 +9,21 @@ import { GhConfig, readRepoJson, writeRepoJson, updateRepoJson, checkToken } fro
 import { registerPush, subToJson } from "@/lib/push";
 
 const LS = "pradar.cfg.v1";
+
+function safeExternalUrl(raw: string | undefined, marketplace?: string, sku?: string): string {
+  const s = String(raw || "").trim();
+  const m = s.match(/https?:\/\/[^\s"'<>]+/i);
+  if (m) return m[0].replace(/[),.;!?]+$/g, "");
+  const sk = String(sku || "");
+  if (/^ali:click:/i.test(sk)) return `https://ali.click/${sk.replace(/^ali:click:/i, "")}`;
+  if (/^ali:short:/i.test(sk)) return `https://a.aliexpress.com/_${sk.replace(/^ali:short:/i, "")}`;
+  if (/^ali:\d+/i.test(sk)) return `https://aliexpress.ru/item/${sk.replace(/^ali:/i, "")}.html`;
+  if (/^ozon:/i.test(sk) && s && !/^https?:/i.test(s)) return `https://www.ozon.ru/product/${sk.replace(/^ozon:(?:t:)?/i, "")}/`;
+  if (/^ym:\d+/i.test(sk)) return `https://market.yandex.ru/product/${sk.replace(/^ym:/i, "")}`;
+  if (/^https?:\/\//i.test(s)) return s;
+  return s || "#";
+}
+
 interface LocalCfg extends GhConfig {
   pushOn?: boolean;
 }
@@ -501,8 +516,11 @@ export default function Page() {
 
   if (booting) {
     return (
-      <main className="wrap" style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "60vh", color: "var(--text2, #93a0c6)" }}>
-        Загрузка…
+      <main className="wrap boot-wrap">
+        <div className="boot-title">Загрузка товаров</div>
+        <div className="loading-dots" aria-label="Загрузка">
+          <span /><span /><span />
+        </div>
       </main>
     );
   }
@@ -549,7 +567,12 @@ export default function Page() {
                   <div className="pbrand">{p.brand}{s?.days ? ` · ${s.days} дн. наблюдений` : ""}</div>
                   <div className="prow">
                     {p.currentPrice ? (
-                      <span className="pprice" style={{ color: delta != null && Math.abs(delta) >= 0.01 ? (delta < 0 ? "var(--down)" : "var(--up)") : undefined }}>{fmt(p.currentPrice)}</span>
+                      <>
+                        {autos.length > 1 && prev != null && prev !== p.currentPrice && (
+                          <span className="pprice-old">{fmt(prev)}</span>
+                        )}
+                        <span className="pprice" style={{ color: delta != null && Math.abs(delta) >= 0.01 ? (delta < 0 ? "var(--down)" : "var(--up)") : undefined }}>{fmt(p.currentPrice)}</span>
+                      </>
                     ) : (
                       <span className="pprice" style={{ color: "var(--text2)" }}>— ₽</span>
                     )}
@@ -574,7 +597,7 @@ export default function Page() {
                 </div>
               </div>
               <div className="pactions" onClick={(e) => e.stopPropagation()}>
-                <a className={`mp-${p.marketplace || "wb"}`} href={p.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                <a className={`mp-${p.marketplace || "wb"}`} href={safeExternalUrl(p.url, p.marketplace, p.sku)} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
                   {p.marketplace === "ozon" ? "Ozon" : p.marketplace === "ym" ? "Я.Маркет" : p.marketplace === "ali" ? "AliExpress" : "WB"}
                 </a>
                 <button className={p.notify ? "notify-on" : "notify-off"} onClick={(e) => { e.stopPropagation(); patch(p.sku, { notify: !p.notify }); }} aria-label={p.notify ? "Отключить уведомления" : "Включить уведомления"}>
@@ -730,7 +753,7 @@ export default function Page() {
                 <button className="ghost" style={{ width: "100%" }} onClick={() => patch(dProduct.sku, { notify: !dProduct.notify })}>
                   {dProduct.notify ? "🔕 Отключить уведомления" : "🔔 Включить уведомления"}
                 </button>
-                <a className="linkrow" href={dProduct.url} target="_blank" rel="noreferrer">Открыть на {dProduct.marketplace === "ym" ? "Яндекс Маркете" : dProduct.marketplace === "ozon" ? "Ozon" : dProduct.marketplace === "ali" ? "AliExpress" : "Wildberries"} ↗</a>
+                <a className="linkrow" href={safeExternalUrl(dProduct.url, dProduct.marketplace, dProduct.sku)} target="_blank" rel="noreferrer">Открыть на {dProduct.marketplace === "ym" ? "Яндекс Маркете" : dProduct.marketplace === "ozon" ? "Ozon" : dProduct.marketplace === "ali" ? "AliExpress" : "Wildberries"} ↗</a>
                 <button className="danger" onClick={() => {
                   if (!armedDelete) { setArmedDelete(true); return; }
                   remove(dProduct.sku); setArmedDelete(false);

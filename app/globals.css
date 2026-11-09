@@ -213,3 +213,14 @@ button.small { padding: 8px 12px; font-size: 13px; }
 .pactions .notify-on { color: var(--text2); }
 .pactions .notify-off { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, var(--card)); }
 .duty-line { font-size: 11px; color: var(--text2); margin-top: 2px; font-variant-numeric: tabular-nums; }
+
+.pprice-old { font-size: 12px; color: var(--text2); text-decoration: line-through; font-variant-numeric: tabular-nums; }
+
+.boot-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; gap: 14px; }
+.boot-title { font-size: 18px; font-weight: 700; color: var(--text); }
+.loading-dots { display: flex; gap: 8px; align-items: flex-end; height: 18px; }
+.loading-dots span { width: 10px; height: 10px; border-radius: 50%; display: block; animation: dot-jump .7s ease-in-out infinite; }
+.loading-dots span:nth-child(1) { background: #007aff; animation-delay: 0s; }
+.loading-dots span:nth-child(2) { background: #ff9500; animation-delay: .12s; }
+.loading-dots span:nth-child(3) { background: #34c759; animation-delay: .24s; }
+@keyframes dot-jump { 0%, 80%, 100% { transform: translateY(0); opacity: .55; } 40% { transform: translateY(-10px); opacity: 1; } }
