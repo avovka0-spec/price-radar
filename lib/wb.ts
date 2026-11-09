@@ -42,6 +42,17 @@ export function parseAliExpressLink(url: string): { sku: string; url: string; na
   // короткая ссылка a.aliexpress.com/...
   const t = s.match(/a\.aliexpress\.com\/_([A-Za-z0-9]+)/i);
   if (t) return { sku: `ali:short:${t[1]}`, url: s, name: "Товар AliExpress", marketplace: "ali" };
+  // партнёрская/короткая ali.click/... (редирект на карточку; агент резолвит по факту)
+  const c = s.match(/ali\.click\/([A-Za-z0-9_-]+)/i);
+  if (c) {
+    const clean = s.replace(/[?#].*$/, "");
+    return { sku: `ali:click:${c[1]}`, url: clean || s, name: "Товар AliExpress", marketplace: "ali" };
+  }
+  // s.click.aliexpress.com и похожие редиректы
+  const sc = s.match(/(?:s\.click\.aliexpress\.com|aliexpress\.click)\/\S*?([A-Za-z0-9_-]{6,})(?:[/?#]|$)/i);
+  if (sc && /click|aliexpress/i.test(s)) {
+    return { sku: `ali:click:${sc[1]}`, url: s, name: "Товар AliExpress", marketplace: "ali" };
+  }
   return null;
 }
 
