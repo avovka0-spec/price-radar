@@ -52,5 +52,16 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794249205171
+  },
+  {
+    "id": "d566634e-b8f0-4a40-a117-50a2a4986136",
+    "sku": "ali:click:u7onq1o",
+    "url": "Вот это скидка! Такая только на Великой Китайской распродаже: SZBOX FEVM FAEX1 AMD Ryzen AI MAX+395 Мини-ПК за 306 088 ₽ - со скидкой 34% https://ali.click/u7onq1o",
+    "name": "SZBOX FEVM FAEX1 AMD Ryzen AI MAX+395 Мини-ПК",
+    "brand": "",
+    "marketplace": "ali",
+    "thresholdPct": 10,
+    "notify": true,
+    "addedAt": 1794249225768
   }
 ]
