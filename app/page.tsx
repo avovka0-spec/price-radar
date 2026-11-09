@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Chart, { fmt } from "@/components/Chart";
 import { parseProductLink, wbImageUrl, fetchWbCard, extractProductName } from "@/lib/wb";
+import { estimateDutyRub, DEFAULT_EUR_RUB } from "@/lib/duty";
 import type { Product, History, PushSub, AppConfig } from "@/lib/types";
 import { GhConfig, readRepoJson, writeRepoJson, updateRepoJson, checkToken } from "@/lib/github";
 import { registerPush, subToJson } from "@/lib/push";
@@ -48,6 +49,7 @@ export default function Page() {
   const [products, setProducts] = useState<Product[]>([]);
   const [history, setHistory] = useState<History>({});
   const [vapid, setVapid] = useState<string>("");
+  const [eurRate, setEurRate] = useState<number>(DEFAULT_EUR_RUB);
   const [cfgLoadErr, setCfgLoadErr] = useState("");
   const [addErr, setAddErr] = useState("");
   const [toast, setToast] = useState("");
@@ -177,6 +179,7 @@ export default function Page() {
       setProducts(list);
       setHistory(h ?? {});
       setVapid(k?.vapidPublicKey ?? "");
+      setEurRate(typeof k?.eurRate === "number" && k.eurRate > 0 ? k.eurRate : DEFAULT_EUR_RUB);
       if (announce) show("Данные обновлены");
     } catch (e: any) {
       setCfgLoadErr(e?.message ?? "Ошибка загрузки");
@@ -554,7 +557,16 @@ export default function Page() {
                       <span className={`pdelta ${delta < 0 ? "down" : "up"}`}>{delta < 0 ? "▼" : "▲"} {Math.abs(delta).toFixed(1)}%</span>
                     )}
                   </div>
-                  {p.marketplace === "ali" && (p.dutyPrice ? <div className="duty-line">+ пошлина {fmt(p.dutyPrice)}</div> : <div className="duty-line">товар из-за рубежа</div>)}
+                  {(() => {
+                    if (p.marketplace !== "ali") return null;
+                    if (p.dutyPrice) return <div className="duty-line">+ пошлина {fmt(p.dutyPrice)}</div>;
+                    if (p.currentPrice) {
+                      const d = estimateDutyRub(p.currentPrice, eurRate);
+                      if (d > 0) return <div className="duty-line">≈ +пошлина {fmt(d)} (14,3% сверх 200 €)</div>;
+                      return <div className="duty-line">без пошлины (≤ 200 €) · из-за рубежа</div>;
+                    }
+                    return <div className="duty-line">товар из-за рубежа</div>;
+                  })()}
                 </div>
                 <div style={{ width: 96, flex: "none", opacity: .9 }}>
                   {hist.length > 1 ? <svg viewBox="0 0 100 40"><MiniSpark pts={hist.slice(-60)} /></svg> : null}
@@ -639,6 +651,8 @@ export default function Page() {
               cfg={cfg}
               isIos={isIos}
               vapid={vapid}
+              eurRate={eurRate}
+              onEurRateChange={(v) => { setEurRate(v); try { localStorage.setItem("pradar.eurRate", String(v)); } catch {} }}
               onSave={(c) => saveCfg(c)}
               onRefresh={() => cfg && loadRepo(cfg, true)}
               onPush={enablePush}
@@ -743,8 +757,8 @@ function applyTheme(t: Theme) {
   document.documentElement.dataset.theme = t;
 }
 
-function SettingsTabView({ cfg, onSave, onRefresh, onPush, vapid, isIos }: {
-  cfg: LocalCfg | null; onSave: (c: LocalCfg) => void; onRefresh: () => void; onPush: () => void; vapid: string; isIos: boolean;
+function SettingsTabView({ cfg, onSave, onRefresh, onPush, vapid, isIos, eurRate, onEurRateChange }: {
+  cfg: LocalCfg | null; onSave: (c: LocalCfg) => void; onRefresh: () => void; onPush: () => void; vapid: string; isIos: boolean; eurRate: number; onEurRateChange: (v: number) => void;
 }) {
   const [view, setView] = useState<"main" | "repo">("main");
   const [owner, setOwner] = useState(cfg?.owner ?? "");
@@ -806,6 +820,11 @@ function SettingsTabView({ cfg, onSave, onRefresh, onPush, vapid, isIos }: {
         <button className={theme === "pink" ? "active" : ""} onClick={() => setTheme("pink")}>Розовая</button>
       </div>
       <button className="ghost" style={{ width: "100%", marginBottom: 12 }} onClick={() => setView("repo")}>📦 Repo / GitHub</button>
+      <div className="field">
+        <label>Курс EUR/RUB (для оценки пошлины)</label>
+        <input type="number" inputMode="decimal" value={eurRate} onChange={(e) => { const v = Number(e.target.value); if (v > 0) onEurRateChange(v); }} />
+        <div className="sub" style={{ marginTop: 4 }}>Пошлина ≈ 14,3% от суммы сверх 200 € (ориентир, не для AliExpress при явном сборе в карточке).</div>
+      </div>
       <button style={{ width: "100%" }} onClick={onPush}>{vapid ? "🔔 Включить push-уведомления" : "🔔 Push: ключ не задан (README)"}</button>
     </div>
   );

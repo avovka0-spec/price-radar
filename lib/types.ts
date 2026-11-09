@@ -34,4 +34,6 @@ export interface PushSub {
 
 export interface AppConfig {
   vapidPublicKey: string;
+  /** Курс EUR/RUB для приблизительного расчёта пошлины */
+  eurRate?: number;
 }
