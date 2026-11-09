@@ -31,6 +31,9 @@ function apiError(status: number, body: string) {
   if (status === 404) {
     return "GitHub: репозиторий, ветка или файл не найдены. Проверьте owner/repo/branch в настройках.";
   }
+  if (status === 409) {
+    return "GitHub: конфликт версии файла (SHA). Данные изменились параллельно (например, агент цен). Обновите список и повторите.";
+  }
   return `GitHub API ${status}: ${body.slice(0, 200)}`;
 }
 
@@ -43,10 +46,11 @@ function withTimeout(ms = 25000) {
 }
 
 async function ghJson<T>(cfg: GhConfig, path: string, init?: RequestInit): Promise<T> {
-  const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}?ref=${cfg.branch}`;
+  const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}?ref=${cfg.branch}&_ts=${Date.now()}`;
   const request = (token: string) =>
     fetch(url, {
       ...init,
+      cache: "no-store",
       signal: init?.signal ?? withTimeout(25000),
       headers: { ...headers(token), ...(init?.headers ?? {}) },
     });
@@ -125,10 +129,13 @@ async function readSha(cfg: GhConfig, path: string): Promise<string | undefined>
   }
 }
 
+const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 /** Записывает JSON-файл в репозиторий одним коммитом (с повторами при конфликте SHA). */
-export async function writeRepoJson(cfg: GhConfig, path: string, data: unknown, message: string, retries = 4) {
+export async function writeRepoJson(cfg: GhConfig, path: string, data: unknown, message: string, retries = 6) {
   let sha = await readSha(cfg, path);
   for (let attempt = 0; attempt < retries; attempt++) {
+    if (attempt > 0) await pause(250 * attempt);
     const res = await putContent(cfg, path, data, message, sha);
     if (res.ok) return;
     if (res.status === 409) {
@@ -137,7 +144,7 @@ export async function writeRepoJson(cfg: GhConfig, path: string, data: unknown, 
     }
     throw new GhError(res.status, apiError(res.status, await res.text()));
   }
-  throw new GhError(409, "GitHub: файл изменился параллельно (конфликт SHA). Обновите данные и повторите.");
+  throw new GhError(409, apiError(409, ""));
 }
 
 /**
@@ -150,26 +157,23 @@ export async function updateRepoJson<T>(
   path: string,
   message: string,
   transform: (current: T | null) => T,
-  retries = 4,
+  retries = 6,
 ): Promise<T> {
-  let last: T | null = null;
+  let lastErr: any = null;
   for (let attempt = 0; attempt < retries; attempt++) {
-    last = await readRepoJson<T>(cfg, path);
-    const next = transform(last);
-    try {
-      // read current SHA right before write for best chance; writeRepoJson also reads, but we want one clean path
-      let sha = await readSha(cfg, path);
-      for (let w = 0; w < 2; w++) {
-        const res = await putContent(cfg, path, next, message, sha);
-        if (res.ok) return next;
-        if (res.status !== 409) throw new GhError(res.status, apiError(res.status, await res.text()));
-        sha = await readSha(cfg, path);
-      }
-      // outer loop will re-read+re-transform
-    } catch (e: any) {
-      if (e?.status === 409) continue;
-      throw e;
+    if (attempt > 0) await pause(300 * attempt);
+    const current = await readRepoJson<T>(cfg, path);
+    const next = transform(current);
+    let sha = await readSha(cfg, path);
+    for (let w = 0; w < 3; w++) {
+      if (w > 0) await pause(200 * w);
+      const res = await putContent(cfg, path, next, message, sha);
+      if (res.ok) return next;
+      if (res.status !== 409) throw new GhError(res.status, apiError(res.status, await res.text()));
+      lastErr = new GhError(409, apiError(409, ""));
+      sha = await readSha(cfg, path);
     }
+    // внешний цикл перечитает свежие данные и применит transform заново
   }
-  throw new GhError(409, "GitHub: файл изменился параллельно (конфликт SHA). Обновите данные и повторите.");
+  throw lastErr ?? new GhError(409, apiError(409, ""));
 }
