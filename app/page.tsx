@@ -258,15 +258,26 @@ export default function Page() {
     setProducts(next);
     if (!overrideUrl) setLink("");
     try {
-      const his = { ...history, [parsed.sku]: currentPrice ? [...(history[parsed.sku] ?? []), { t: Date.now(), p: currentPrice }] : (history[parsed.sku] ?? []) };
+      const point = currentPrice ? { t: Date.now(), p: currentPrice } : null;
+      const his = { ...history, [parsed.sku]: point ? [...(history[parsed.sku] ?? []), point] : (history[parsed.sku] ?? []) };
       setHistory(his);
       if (cfg) {
-        await writeRepoJson(cfg, "public/data/products.json", next, `Добавлен ${parsed.marketplace.toUpperCase()} ${parsed.sku}`);
-        await writeRepoJson(cfg, "public/data/history.json", his, `История: ${parsed.sku}`);
+        await updateRepoJson<{ products?: Product[] } | Product[]>(cfg, "public/data/products.json", `Добавлен ${parsed.marketplace.toUpperCase()} ${parsed.sku}`, (cur) => {
+          const list = Array.isArray(cur) ? cur : cur?.products ?? [];
+          return list.some((p) => p.sku === parsed.sku) ? list : [...list, created];
+        });
+        await updateRepoJson<History>(cfg, "public/data/history.json", `История: ${parsed.sku}`, (cur) => {
+          const base = { ...(cur ?? {}) };
+          const arr = [...(base[parsed.sku] ?? [])];
+          if (point && !arr.some((x) => x.p === point.p && Math.abs(x.t - point.t) < 5000)) arr.push(point);
+          base[parsed.sku] = arr;
+          return base;
+        });
       }
       show(parsed.marketplace === "wb" && currentPrice ? "Добавлено, цена получена" : "Добавлено. Цену уточним при следующей проверке (или введите вручную)");
     } catch (e: any) {
       setAddErr(`Не удалось закоммитить в репо: ${e?.message}. Проверьте токен/ветку в настройках.`);
+      if (cfg) await loadRepo(cfg, false).catch(() => {});
     }
   };
 
@@ -354,15 +365,23 @@ export default function Page() {
     const pts = [...(history[dProduct.sku] ?? [])];
     const last = pts[pts.length - 1];
     if (last?.p === price && Date.now() - last.t < 6 * 3600e3) return show("Такая точка уже есть за последние 6 часов");
-    pts.push({ t: Date.now(), p: price, m: 1 });
+    const point = { t: Date.now(), p: price, m: 1 as const };
+    pts.push(point);
     setHistory({ ...history, [dProduct.sku]: pts });
     setManualVal("");
     if (cfg) {
       try {
-        await writeRepoJson(cfg, "public/data/history.json", { ...history, [dProduct.sku]: pts }, `История: ручная точка ${dProduct.sku}`);
+        await updateRepoJson<History>(cfg, "public/data/history.json", `История: ручная точка ${dProduct.sku}`, (cur) => {
+          const base = { ...(cur ?? {}) };
+          const arr = [...(base[dProduct.sku] ?? [])];
+          if (!arr.some((x) => x.p === point.p && Math.abs(x.t - point.t) < 5000)) arr.push(point);
+          base[dProduct.sku] = arr;
+          return base;
+        });
         show("Цена добавлена в график, попадёт в историю при следующей синхронизации");
       } catch (e: any) {
         show(`Точка сохранена локально, но коммит не удался: ${e?.message}`);
+        await loadRepo(cfg, false).catch(() => {});
       }
     } else {
       show("Точка добавлена на график (демо — сохранена локально)");
