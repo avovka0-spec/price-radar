@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Chart, { fmt } from "@/components/Chart";
 import { parseProductLink, wbImageUrl, fetchWbCard } from "@/lib/wb";
 import type { Product, History, PushSub, AppConfig } from "@/lib/types";
-import { GhConfig, readRepoJson, writeRepoJson, checkToken } from "@/lib/github";
+import { GhConfig, readRepoJson, writeRepoJson, updateRepoJson, checkToken } from "@/lib/github";
 import { registerPush, subToJson } from "@/lib/push";
 
 const LS = "pradar.cfg.v1";
@@ -191,10 +191,34 @@ export default function Page() {
     loadRepo(c, true);
   };
 
+  // Дебаунс коммитов настроек товара: onChange обновляет UI сразу, в GitHub пишем раз в паузу,
+  // чтобы не плодить параллельные PUT по products.json (это давало конфликт SHA при удалении).
+  const patchCommitRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingProductsRef = useRef<Product[] | null>(null);
+  const flushPatchCommit = useCallback(async () => {
+    if (patchCommitRef.current) { clearTimeout(patchCommitRef.current); patchCommitRef.current = null; }
+    const next = pendingProductsRef.current;
+    pendingProductsRef.current = null;
+    if (!next || !cfg) return;
+    try {
+      await updateRepoJson<Product[]>(cfg, "public/data/products.json", "Настройки товаров", (cur) => {
+        const fresh = Array.isArray(cur) ? cur : (cur as any)?.products ?? next;
+        // применяем локальные правки поверх свежих данных, чтобы не потерять параллельные обновления цен
+        const localBySku = new Map(next.map((p) => [p.sku, p]));
+        return fresh.map((p: Product) => {
+          const l = localBySku.get(p.sku);
+          return l ? { ...p, targetPrice: l.targetPrice, thresholdPct: l.thresholdPct, notify: l.notify } : p;
+        }).concat(next.filter((p) => !fresh.some((f: Product) => f.sku === p.sku)));
+      });
+    } catch { /* тихо: не мешаем UX, при следующем изменении повторим */ }
+  }, [cfg]);
+  useEffect(() => { if (detail === null) void flushPatchCommit(); }, [detail, flushPatchCommit]);
+
   // --- добавление товара ---
   const addProduct = async (overrideUrl?: string) => {
     setAddErr("");
     if (!cfg && !demo) return setShowOnboard(true);
+    await flushPatchCommit();
     const input = (overrideUrl ?? link).trim();
     const parsed = parseProductLink(input);
     if (!parsed) return setAddErr("Не похоже на ссылку WB/Ozon/Яндекс Маркет/AliExpress или артикул");
@@ -255,14 +279,18 @@ export default function Page() {
 
   const patch = (sku: string, changes: Partial<Product>) => {
     const next = products.map((p) => (p.sku === sku ? { ...p, ...changes } : p));
-    if (cfg) {
-      // изменим локально, коммит позже в debounce не нужен — пишем сразу
-      writeRepoJson(cfg, "public/data/products.json", next, `Настройки ${sku}`).catch(() => {});
-    }
     setProducts(next);
+    if (cfg) {
+      pendingProductsRef.current = next;
+      if (patchCommitRef.current) clearTimeout(patchCommitRef.current);
+      patchCommitRef.current = setTimeout(() => { void flushPatchCommit(); }, 900);
+    }
   };
 
   const remove = (sku: string) => {
+    // отменяем отложенный коммит настроек, иначе он может перезаписать products.json после удаления
+    if (patchCommitRef.current) { clearTimeout(patchCommitRef.current); patchCommitRef.current = null; }
+    pendingProductsRef.current = null;
     const next = products.filter((p) => p.sku !== sku);
     const his = { ...history };
     delete his[sku];
@@ -270,16 +298,26 @@ export default function Page() {
     setHistory(his);
     setDetail(null);
     if (cfg) {
-      Promise.allSettled([
-        writeRepoJson(cfg, "public/data/products.json", next, `Удалён ${sku}`),
-        writeRepoJson(cfg, "public/data/history.json", his, `История: удалён ${sku}`),
-      ]).then(([a, b]) => {
+      void (async () => {
+        const [a, b] = await Promise.allSettled([
+          updateRepoJson<{ products?: Product[] } | Product[]>(cfg, "public/data/products.json", `Удалён ${sku}`, (cur) => {
+            const list = Array.isArray(cur) ? cur : cur?.products ?? [];
+            return list.filter((p) => p.sku !== sku);
+          }),
+          updateRepoJson<History>(cfg, "public/data/history.json", `История: удалён ${sku}`, (cur) => {
+            const h = { ...(cur ?? {}) };
+            delete h[sku];
+            return h;
+          }),
+        ]);
         const err = [a, b].find((r): r is PromiseRejectedResult => r.status === "rejected")?.reason;
         if (err) {
           const msg = err?.message ? String(err.message) : "ошибка записи";
           show(`Не сохранено в GitHub: ${msg.slice(0, 140)}`);
+          // подтянем актуальное состояние, чтобы UI не расходился с репозиторием
+          await loadRepo(cfg, false).catch(() => {});
         } else show("Удалено");
-      });
+      })();
     }
   };
 
