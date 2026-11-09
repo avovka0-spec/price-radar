@@ -9,7 +9,7 @@
     "thresholdPct": 3,
     "notify": true,
     "addedAt": 1793978460143,
-    "lastCheckedAt": 1794243464001,
+    "lastCheckedAt": 1794250663296,
     "currentPrice": 290849,
     "targetPrice": 280000
   },
@@ -24,7 +24,7 @@
     "thresholdPct": 5,
     "notify": true,
     "addedAt": 1794080011028,
-    "lastCheckedAt": 1794243470708,
+    "lastCheckedAt": 1794250669717,
     "currentPrice": 313493,
     "targetPrice": 300000
   },
@@ -39,7 +39,7 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794153434621,
-    "lastCheckedAt": 1794243477480,
+    "lastCheckedAt": 1794250676175,
     "currentPrice": 144494
   },
   {
@@ -51,7 +51,8 @@
     "marketplace": "ali",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794249205171
+    "addedAt": 1794249205171,
+    "lastCheckedAt": 1794250684285
   },
   {
     "id": "d566634e-b8f0-4a40-a117-50a2a4986136",
@@ -62,7 +63,8 @@
     "marketplace": "ali",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794249225768
+    "addedAt": 1794249225768,
+    "lastCheckedAt": 1794250692381
   },
   {
     "id": "f0790d57-656e-44bd-b89d-7ae8fb57a6b8",
@@ -73,6 +75,7 @@
     "marketplace": "ali",
     "thresholdPct": 10,
     "notify": true,
-    "addedAt": 1794249241517
+    "addedAt": 1794249241517,
+    "lastCheckedAt": 1794250700498
   }
 ]
