@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Chart, { fmt } from "@/components/Chart";
-import { parseProductLink, wbImageUrl, fetchWbCard } from "@/lib/wb";
+import { parseProductLink, wbImageUrl, fetchWbCard, extractProductName } from "@/lib/wb";
 import type { Product, History, PushSub, AppConfig } from "@/lib/types";
 import { GhConfig, readRepoJson, writeRepoJson, updateRepoJson, checkToken } from "@/lib/github";
 import { registerPush, subToJson } from "@/lib/push";
@@ -285,7 +285,11 @@ export default function Page() {
       if (card) { name = card.name || name; brand = card.brand || brand; currentPrice = card.price; }
       image = wbImageUrl(parsed.sku);
     } else {
-      // Ozon/Яндекс Маркет/AliExpress: имя из ссылки/slug если есть; цену уточним вручную или локальным агентом
+      // Ozon/Яндекс Маркет/AliExpress: имя из slug/ссылки; если нет — пробуем вытащить из текста (share/промо)
+      if (!name || /^(Товар (Ozon|AliExpress|Яндекс Маркета)|[-—])$/i.test(name)) {
+        const inferred = extractProductName(input);
+        if (inferred) name = inferred;
+      }
       if (!name) name = parsed.marketplace === "ym" ? "Товар Яндекс Маркета" : parsed.marketplace === "ali" ? "Товар AliExpress" : "Товар Ozon";
     }
 

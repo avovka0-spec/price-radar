@@ -84,6 +84,27 @@ export function parseProductLink(url: string): ParsedProduct | null {
   return null;
 }
 
+/** Эвристика: достаёт название товара из текста "поделиться" (промо + название + цена + ссылка). */
+export function extractProductName(raw: string): string {
+  let s = String(raw || "").replace(/\r/g, " ").replace(/\s+/g, " ").trim();
+  if (!s) return "";
+  // убираем URL
+  s = s.replace(/https?:\/\/\S+/gi, " ").replace(/\s+/g, " ").trim();
+  // частые промо-префиксы до двоеточия
+  const promo = s.match(/^.*?(?:распродаже|скидк[аиоуюяеё]*|акци[ия]|предложени[ея]|sale|deal)\s*[:—-]\s*/i);
+  if (promo && promo[0].length < 140) s = s.slice(promo[0].length);
+  // отрезаем хвост с ценой/скидкой
+  s = s.replace(/\s+(?:за|цена|всего|от)\s+\d[\d\s\u00a0]*(?:[.,]\d+)?\s*[₽рrub$€].*$/i, " ");
+  s = s.replace(/\s*[-—–]\s*со\s+скидк.*$/i, " ");
+  s = s.replace(/\s*скидк[аи].*$/i, " ");
+  s = s.replace(/\s+\d[\d\s\u00a0]*(?:[.,]\d+)?\s*[₽р](?:\s|$).*$/i, " ");
+  s = s.replace(/^[\s:—\-•!?.]+|[\s:—\-•!?.]+$/g, "").replace(/\s+/g, " ").trim();
+  if (s.length < 4 || s.length > 180) return "";
+  // слишком общий мусор
+  if (/^(вот|такая|только|супер|выгодно|купи|закажи)$/i.test(s)) return "";
+  return s;
+}
+
 // basket-бакет для картинки (алгоритм WB, может меняться со временем)
 export function wbImageUrl(sku: string): string | undefined {
   const n = Number(sku);
