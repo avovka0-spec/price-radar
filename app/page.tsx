@@ -543,23 +543,30 @@ export default function Page() {
                 {p.image ? <img src={p.image} alt="" onError={(e) => ((e.target as HTMLImageElement).style.visibility = "hidden")} /> : <div style={{ width: 56 }} />}
                 <div className="pinfo">
                   <div className="pname">{p.name}{p.favorite ? <span className="fav-star">★</span> : null}</div>
-                  <div className="pbrand">
-                    {p.marketplace === "wb" && <span className="mpbadge wb">WB</span>}
-                    {p.marketplace === "ozon" && <span className="mpbadge ozon">Ozon</span>}
-                    {p.marketplace === "ym" && <span className="mpbadge ym">ЯМ</span>}
-                    {p.marketplace === "ali" && <span className="mpbadge ali">Ali</span>}
-                    {p.brand}{s?.days ? ` · ${s.days} дн. наблюдений` : ""}
-                  </div>
+                  <div className="pbrand">{p.brand}{s?.days ? ` · ${s.days} дн. наблюдений` : ""}</div>
                   <div className="prow">
-                    {p.currentPrice ? <span className="pprice">{fmt(p.currentPrice)}</span> : <span className="pprice" style={{ color: "var(--text2)" }}>— ₽</span>}
+                    {p.currentPrice ? (
+                      <span className="pprice" style={{ color: delta != null && Math.abs(delta) >= 0.01 ? (delta < 0 ? "var(--down)" : "var(--up)") : undefined }}>{fmt(p.currentPrice)}</span>
+                    ) : (
+                      <span className="pprice" style={{ color: "var(--text2)" }}>— ₽</span>
+                    )}
                     {delta !== null && Math.abs(delta) >= 0.5 && (
                       <span className={`pdelta ${delta < 0 ? "down" : "up"}`}>{delta < 0 ? "▼" : "▲"} {Math.abs(delta).toFixed(1)}%</span>
                     )}
                   </div>
+                  {p.marketplace === "ali" && (p.dutyPrice ? <div className="duty-line">+ пошлина {fmt(p.dutyPrice)}</div> : <div className="duty-line">товар из-за рубежа</div>)}
                 </div>
                 <div style={{ width: 96, flex: "none", opacity: .9 }}>
                   {hist.length > 1 ? <svg viewBox="0 0 100 40"><MiniSpark pts={hist.slice(-60)} /></svg> : null}
                 </div>
+              </div>
+              <div className="pactions" onClick={(e) => e.stopPropagation()}>
+                <a className={`mp-${p.marketplace || "wb"}`} href={p.url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>
+                  {p.marketplace === "ozon" ? "Ozon" : p.marketplace === "ym" ? "Я.Маркет" : p.marketplace === "ali" ? "AliExpress" : "WB"}
+                </a>
+                <button className={p.notify ? "notify-on" : "notify-off"} onClick={(e) => { e.stopPropagation(); patch(p.sku, { notify: !p.notify }); }} aria-label={p.notify ? "Отключить уведомления" : "Включить уведомления"}>
+                  {p.notify ? "🔔" : "🔕"}
+                </button>
               </div>
             </div>
           </div>

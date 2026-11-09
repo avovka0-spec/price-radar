@@ -202,3 +202,14 @@ button.small { padding: 8px 12px; font-size: 13px; }
 .swipe-content .pcard { border-radius: 0; }
 .swipe-wrap.revealed .swipe-content { transform: translateX(-144px); }
 .fav-star { color: #ff9f0a; margin-left: 4px; font-size: 12px; }
+
+.pactions { display: flex; gap: 0; border-top: 0.5px solid var(--sep); }
+.pactions > a, .pactions > button { flex: 1 1 50%; width: 50%; margin: 0; border: none; border-radius: 0; padding: 10px 8px; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; background: var(--card); color: var(--text); }
+.pactions > * + * { border-left: 0.5px solid var(--sep); }
+.pactions .mp-wb { color: #fff; background: #7b2ff7; }
+.pactions .mp-ozon { color: #fff; background: #005bff; }
+.pactions .mp-ym { color: #fff; background: #7a3cff; }
+.pactions .mp-ali { color: #fff; background: #ff6a00; }
+.pactions .notify-on { color: var(--text2); }
+.pactions .notify-off { color: var(--danger); background: color-mix(in srgb, var(--danger) 10%, var(--card)); }
+.duty-line { font-size: 11px; color: var(--text2); margin-top: 2px; font-variant-numeric: tabular-nums; }

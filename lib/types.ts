@@ -19,6 +19,8 @@ export interface Product {
   thresholdPct?: number; // % изменения для уведомления
   notify: boolean;
   favorite?: boolean; // избранное/отложенные
+  /** Пошлина/доп. расходы для зарубежных товаров (₽), если известны */
+  dutyPrice?: number;
   addedAt: number;
 }
 
