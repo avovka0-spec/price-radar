@@ -63,5 +63,16 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794249225768
+  },
+  {
+    "id": "f0790d57-656e-44bd-b89d-7ae8fb57a6b8",
+    "sku": "ali:click:e9onq18",
+    "url": "Вот это скидка! Такая только на Великой Китайской распродаже: Мини-ПК GMKtec EVO-X2 Next Gen AMD Ryzen AI Max+ за 333 330 ₽ - со скидкой 35% https://ali.click/e9onq18",
+    "name": "Мини-ПК GMKtec EVO-X2 Next Gen AMD Ryzen AI Max+",
+    "brand": "",
+    "marketplace": "ali",
+    "thresholdPct": 10,
+    "notify": true,
+    "addedAt": 1794249241517
   }
 ]
