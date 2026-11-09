@@ -1,5 +1,5 @@
 "use client";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { History } from "@/lib/types";
 
 const MAXH = 180 * 24 * 3600 * 1000;
@@ -64,6 +64,8 @@ export default function Chart({ history, sku, height = 220 }: { history?: Histor
   const manual = pts.filter((x) => x.m);
   const minPt = pts.find(x => x.p === lo) || last;
   const maxPt = pts.find(x => x.p === hi) || last;
+  const [active, setActive] = useState<number | null>(null);
+  const ap = active != null ? pts[active] : null;
 
   return (
     <div style={{ margin: "8px 0" }}>
@@ -71,15 +73,16 @@ export default function Chart({ history, sku, height = 220 }: { history?: Histor
         <span style={{ color: trendColor, fontWeight: 600 }}>
           {delta === 0 ? "без изменений" : `${delta < 0 ? "▼" : "▲"} ${Math.abs(Math.round(delta)).toLocaleString("ru-RU")} ₽ (${deltaPct > 0 ? "+" : ""}${deltaPct.toFixed(1)}%)`}
         </span>
-        <span className="sub">за период · {pts.length} точек{manual.length ? `, вручную: ${manual.length}` : ""}</span>
+        <span className="sub">за период · {pts.length} точек{manual.length ? `, вручную: ${manual.length}` : ""} · тап по точке — цена</span>
       </div>
-      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={height} role="img" aria-label="График цены" data-pts={pts.length} style={{ display: "block" }}>
+      <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={height} role="img" aria-label="График цены" data-pts={pts.length} style={{ display: "block", touchAction: "manipulation" }} onClick={(e) => { if (e.target === e.currentTarget) setActive(null); }}>
         <defs>
           <linearGradient id="ga" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="var(--accent)" stopOpacity="0.22" />
             <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
           </linearGradient>
         </defs>
+        <rect x={0} y={0} width={W} height={H} fill="transparent" onClick={() => setActive(null)} />
         {grid.map((g, i) => (
           <line key={i} x1={PT.l} x2={W - PT.r} y1={Y(g)} y2={Y(g)} stroke="var(--sep, #263258)" strokeWidth="0.6" />
         ))}
@@ -88,14 +91,31 @@ export default function Chart({ history, sku, height = 220 }: { history?: Histor
         <path d={path} fill="none" stroke="var(--accent)" strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />
         {hi !== lo && minPt !== maxPt && (
           <>
-            <circle cx={X(minPt.t)} cy={Y(minPt.p)} r="2.6" fill="var(--down, #37c871)" opacity="0.9" />
-            <circle cx={X(maxPt.t)} cy={Y(maxPt.p)} r="2.6" fill="var(--up, #ff5d6c)" opacity="0.9" />
+            <circle cx={X(minPt.t)} cy={Y(minPt.p)} r="2.4" fill="var(--down, #37c871)" opacity="0.9" pointerEvents="none" />
+            <circle cx={X(maxPt.t)} cy={Y(maxPt.p)} r="2.4" fill="var(--up, #ff5d6c)" opacity="0.9" pointerEvents="none" />
           </>
         )}
-        {manual.map((x, i) => (
-          <circle key={"m" + i} cx={X(x.t)} cy={Y(x.p)} r="3.2" fill="var(--card, #141c33)" stroke="var(--accent)" strokeWidth="1.5"><title>Вручную: {fmt(x.p)} · {fmtD(x.t)}</title></circle>
+        {pts.map((x, i) => (
+          <g key={i} onClick={(e) => { e.stopPropagation(); setActive(i === active ? null : i); }} style={{ cursor: "pointer" }}>
+            <circle cx={X(x.t)} cy={Y(x.p)} r="14" fill="transparent" />
+            <circle cx={X(x.t)} cy={Y(x.p)} r={active === i ? 4.5 : 2.8} fill={x.m ? "var(--card, #141c33)" : "var(--accent)"} stroke={x.m || active === i ? "var(--accent)" : "none"} strokeWidth={x.m ? 1.5 : 2} opacity={active === i ? 1 : 0.75} />
+          </g>
         ))}
-        <circle cx={X(last.t)} cy={Y(last.p)} r="4" fill="var(--accent)" />
+        {ap && (() => {
+          const cx = X(ap.t), cy = Y(ap.p);
+          const label = `${fmt(ap.p)} · ${fmtD(ap.t)}${ap.m ? " (вручную)" : ""}`;
+          const tw = Math.min(220, Math.max(90, label.length * 6.2));
+          const tx = Math.min(W - tw - 4, Math.max(4, cx - tw / 2));
+          const above = cy > PT.t + 34;
+          const ty = above ? cy - 30 : cy + 10;
+          return (
+            <g pointerEvents="none">
+              <line x1={cx} y1={cy} x2={cx} y2={above ? ty + 22 : ty} stroke="var(--accent)" strokeWidth="1" opacity="0.5" />
+              <rect x={tx} y={ty} width={tw} height={22} rx={6} fill="var(--card, #141c33)" stroke="var(--sep, #263258)" />
+              <text x={tx + tw / 2} y={ty + 14.5} textAnchor="middle" fontSize="10.5" fontWeight="600" fill="var(--text, #eaf0ff)">{label}</text>
+            </g>
+          );
+        })()}
         <text x={W - 2} y={Math.max(PT.t + 8, Y(hi) + 4)} textAnchor="end" fontSize="10" fill="var(--text2, #93a0c6)">{short(hi)}</text>
         {hi !== lo && <text x={W - 2} y={Math.min(H - PT.b - 2, Y(lo) - 3)} textAnchor="end" fontSize="10" fill="var(--text2, #93a0c6)">{short(lo)}</text>}
         <text x={PT.l} y={H - 6} fontSize="10" fill="var(--text2, #93a0c6)">{fmtD(t0)}</text>

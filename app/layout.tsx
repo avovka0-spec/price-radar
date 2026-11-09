@@ -24,9 +24,12 @@ export const viewport: Viewport = {
   ],
 };
 
+const themeInit = `(function(){try{var t=localStorage.getItem('pradar.theme'); if(t==='light'||t==='dark'||t==='pink') document.documentElement.dataset.theme=t;}catch(e){}})();`;
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ru">
+    <html lang="ru" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{ __html: themeInit }} /></head>
       <body>{children}</body>
     </html>
   );

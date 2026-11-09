@@ -523,8 +523,8 @@ export default function Page() {
         return (
           <div className={`swipe-wrap${revealed ? " revealed" : ""}`} key={p.sku}>
             <div className="swipe-actions" aria-hidden={!revealed}>
-              <button className="act-fav" onClick={(e) => { e.stopPropagation(); toggleFavorite(p.sku); }}>{p.favorite ? "★" : "☆"}<br /><span style={{ fontSize: 11 }}>{p.favorite ? "Убрать" : "В избранное"}</span></button>
-              <button className="act-del" onClick={(e) => { e.stopPropagation(); remove(p.sku); }}>🗑<br /><span style={{ fontSize: 11 }}>Удалить</span></button>
+              <button className="act-fav" aria-label={p.favorite ? "Убрать из отложенных" : "В отложенные"} onClick={(e) => { e.stopPropagation(); toggleFavorite(p.sku); }}>{p.favorite ? "♥" : "♡"}</button>
+              <button className="act-del" aria-label="Удалить" onClick={(e) => { e.stopPropagation(); remove(p.sku); }}>🗑</button>
             </div>
             <div
               className="swipe-content"
@@ -729,15 +729,28 @@ function MiniSpark({ pts }: { pts: { t: number; p: number; m?: 1 }[] }) {
 }
 
 /* ---- Настройки (вкладка) ---- */
+type Theme = "light" | "dark" | "pink";
+const THEME_KEY = "pradar.theme";
+function applyTheme(t: Theme) {
+  try { localStorage.setItem(THEME_KEY, t); } catch {}
+  document.documentElement.dataset.theme = t;
+}
+
 function SettingsTabView({ cfg, onSave, onRefresh, onPush, vapid, isIos }: {
   cfg: LocalCfg | null; onSave: (c: LocalCfg) => void; onRefresh: () => void; onPush: () => void; vapid: string; isIos: boolean;
 }) {
+  const [view, setView] = useState<"main" | "repo">("main");
   const [owner, setOwner] = useState(cfg?.owner ?? "");
   const [repo, setRepo] = useState(cfg?.repo ?? "");
   const [token, setToken] = useState(cfg?.token ?? "");
   const [branch, setBranch] = useState(cfg?.branch ?? "main");
   const [tokenCheck, setTokenCheck] = useState("");
+  const [theme, setTheme] = useState<Theme>(() => {
+    try { const t = localStorage.getItem(THEME_KEY) as Theme; if (t === "light" || t === "dark" || t === "pink") return t; } catch {}
+    return "light";
+  });
   useEffect(() => { if (cfg) { setOwner(cfg.owner); setRepo(cfg.repo); setToken(cfg.token); setBranch(cfg.branch); } }, [cfg]);
+  useEffect(() => { applyTheme(theme); }, [theme]);
 
   const testToken = async () => {
     setTokenCheck("Проверяю…");
@@ -749,6 +762,29 @@ function SettingsTabView({ cfg, onSave, onRefresh, onPush, vapid, isIos }: {
     }
   };
 
+  if (view === "repo") {
+    return (
+      <div className="card" style={{ padding: 16 }}>
+        <button className="ghost small" onClick={() => setView("main")} style={{ marginBottom: 10 }}>← Настройки</button>
+        <div style={{ fontSize: 17, fontWeight: 700, marginBottom: 12 }}>Репозиторий и GitHub</div>
+        <div className="row2">
+          <div className="field"><label>Владелец репо</label><input value={owner} onChange={(e) => setOwner(e.target.value)} autoCapitalize="none" /></div>
+          <div className="field"><label>Репозиторий</label><input value={repo} onChange={(e) => setRepo(e.target.value)} autoCapitalize="none" /></div>
+        </div>
+        <div className="field"><label>Ветка</label><input value={branch} onChange={(e) => setBranch(e.target.value)} autoCapitalize="none" /></div>
+        <div className="field"><label>GitHub-токен (Contents: Read and write)</label><input value={token} onChange={(e) => setToken(e.target.value)} type="password" autoCapitalize="none" autoCorrect="off" /></div>
+        <div className="sub" style={{ marginTop: -4, marginBottom: 8 }}>Токен нужен для добавления/изменения/удаления товаров. Чтение публичного репозитория работает и без него.</div>
+        <button className="ghost" style={{ width: "100%" }} disabled={!token} onClick={testToken}>Проверить токен</button>
+        {tokenCheck && <div className="sub" style={{ marginTop: 6 }}>{tokenCheck}</div>}
+        <div style={{ height: 8 }} />
+        <button style={{ width: "100%" }} onClick={() => onSave({ owner: owner.trim(), repo: repo.trim(), token: token.trim(), branch: branch.trim() || "main" })}>Сохранить конфигурацию</button>
+        <div style={{ height: 12 }} />
+        <button className="ghost" style={{ width: "100%" }} onClick={onRefresh}>🔄 Обновить цены из репозитория</button>
+        <a className="linkrow" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Создать GitHub-токен ↗</a>
+      </div>
+    );
+  }
+
   return (
     <div className="card" style={{ padding: 16 }}>
       {isIos && (
@@ -756,22 +792,14 @@ function SettingsTabView({ cfg, onSave, onRefresh, onPush, vapid, isIos }: {
           <b>iPhone:</b> для push установите PWA на экран «Домой» (Safari → «Поделиться» → «На экран Домой»).
         </div>
       )}
-      <div className="row2">
-        <div className="field"><label>Владелец репо</label><input value={owner} onChange={(e) => setOwner(e.target.value)} autoCapitalize="none" /></div>
-        <div className="field"><label>Репозиторий</label><input value={repo} onChange={(e) => setRepo(e.target.value)} autoCapitalize="none" /></div>
+      <div style={{ fontSize: 13, color: "var(--text2)", marginBottom: 6, textTransform: "uppercase", letterSpacing: ".4px" }}>Оформление</div>
+      <div className="theme-row">
+        <button className={theme === "light" ? "active" : ""} onClick={() => setTheme("light")}>Светлая</button>
+        <button className={theme === "dark" ? "active" : ""} onClick={() => setTheme("dark")}>Тёмная</button>
+        <button className={theme === "pink" ? "active" : ""} onClick={() => setTheme("pink")}>Розовая</button>
       </div>
-      <div className="field"><label>Ветка</label><input value={branch} onChange={(e) => setBranch(e.target.value)} autoCapitalize="none" /></div>
-      <div className="field"><label>GitHub-токен (Contents: Read and write)</label><input value={token} onChange={(e) => setToken(e.target.value)} type="password" autoCapitalize="none" autoCorrect="off" /></div>
-      <div className="sub" style={{ marginTop: -4, marginBottom: 8 }}>Токен нужен для добавления/изменения/удаления товаров. Чтение публичного репозитория работает и без него.</div>
-      <button className="ghost" style={{ width: "100%" }} disabled={!token} onClick={testToken}>Проверить токен</button>
-      {tokenCheck && <div className="sub" style={{ marginTop: 6 }}>{tokenCheck}</div>}
-      <div style={{ height: 8 }} />
-      <button style={{ width: "100%" }} onClick={() => onSave({ owner: owner.trim(), repo: repo.trim(), token: token.trim(), branch: branch.trim() || "main" })}>Сохранить конфигурацию</button>
-      <div style={{ height: 12 }} />
-      <button className="ghost" style={{ width: "100%" }} onClick={onRefresh}>🔄 Обновить цены из репозитория</button>
-      <div style={{ height: 8 }} />
+      <button className="ghost" style={{ width: "100%", marginBottom: 12 }} onClick={() => setView("repo")}>📦 Repo / GitHub</button>
       <button style={{ width: "100%" }} onClick={onPush}>{vapid ? "🔔 Включить push-уведомления" : "🔔 Push: ключ не задан (README)"}</button>
-      <a className="linkrow" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Создать GitHub-токен ↗</a>
     </div>
   );
 }

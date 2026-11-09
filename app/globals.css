@@ -1,4 +1,4 @@
-:root {
+:root, [data-theme="light"] {
   --bg: #f2f2f7;
   --card: #ffffff;
   --text: #1c1c1e;
@@ -11,7 +11,7 @@
   --sheet: rgba(245, 245, 247, 0.94);
 }
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]):not([data-theme="pink"]) {
     --bg: #000000;
     --card: #1c1c1e;
     --text: #ffffff;
@@ -19,6 +19,30 @@
     --sep: rgba(84, 84, 88, 0.4);
     --sheet: rgba(28, 28, 30, 0.94);
   }
+}
+[data-theme="dark"] {
+  --bg: #000000;
+  --card: #1c1c1e;
+  --text: #ffffff;
+  --text2: #98989f;
+  --sep: rgba(84, 84, 88, 0.4);
+  --accent: #0a84ff;
+  --down: #30d158;
+  --up: #ff453a;
+  --danger: #ff453a;
+  --sheet: rgba(28, 28, 30, 0.94);
+}
+[data-theme="pink"] {
+  --bg: #fff0f6;
+  --card: #ffffff;
+  --text: #40202d;
+  --text2: #9b6b7f;
+  --sep: rgba(180, 90, 130, 0.18);
+  --accent: #e84a8a;
+  --down: #34c759;
+  --up: #ff4d6d;
+  --danger: #ff4d6d;
+  --sheet: rgba(255, 245, 250, 0.96);
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -145,6 +169,10 @@ button.small { padding: 8px 12px; font-size: 13px; }
 .linkrow { display: block; text-align: center; color: var(--accent); font-size: 14px; text-decoration: none; padding: 12px 0; }
 .empty { text-align: center; color: var(--text2); padding: 40px 20px; font-size: 14px; line-height: 1.6; }
 
+.theme-row { display: flex; gap: 8px; margin: 8px 0 14px; }
+.theme-row button { flex: 1; padding: 10px 8px; font-size: 13px; background: var(--bg); color: var(--text); border: 1px solid var(--sep); }
+.theme-row button.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
 /* bottom tab nav (yoloprice-style) */
 .wrap.has-tabs { padding-bottom: calc(env(safe-area-inset-bottom) + 78px); }
 .tabbar {
@@ -167,10 +195,10 @@ button.small { padding: 8px 12px; font-size: 13px; }
 /* swipe actions (WB-style) */
 .swipe-wrap { position: relative; overflow: hidden; border-radius: 16px; margin-bottom: 12px; box-shadow: 0 1px 2px rgba(0,0,0,.04); background: var(--card); touch-action: pan-y; }
 .swipe-actions { position: absolute; top: 0; right: 0; bottom: 0; display: flex; }
-.swipe-actions button { border-radius: 0; padding: 0 16px; min-width: 76px; height: 100%; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; white-space: nowrap; }
+.swipe-actions button { border-radius: 0; padding: 0; width: 72px; min-width: 72px; height: 100%; font-size: 22px; font-weight: 700; display: flex; align-items: center; justify-content: center; white-space: nowrap; flex: 0 0 72px; }
 .swipe-actions .act-fav { background: #ff9f0a; color: #fff; }
 .swipe-actions .act-del { background: var(--danger); color: #fff; }
 .swipe-content { position: relative; z-index: 1; background: var(--card); transition: transform .18s ease; }
 .swipe-content .pcard { border-radius: 0; }
-.swipe-wrap.revealed .swipe-content { transform: translateX(-152px); }
+.swipe-wrap.revealed .swipe-content { transform: translateX(-144px); }
 .fav-star { color: #ff9f0a; margin-left: 4px; font-size: 12px; }
