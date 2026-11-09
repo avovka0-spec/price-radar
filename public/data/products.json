@@ -43,22 +43,6 @@
     "currentPrice": 144143
   },
   {
-    "id": "fa4a1200-efe3-48ce-b151-9e7e7dbc7666",
-    "sku": "ozon:3673530996",
-    "url": "https://www.ozon.ru/product/eksklyuzivnyy-svetodiodnyy-nochnik-s-proektsiey-zvezdnogo-neba-i-luny-osnashchennyy-3d-effektom-i-3673530996/",
-    "name": "Эксклюзивный светодиодный ночник с проекцией звездного неба и луны, оснащенный 3D эффектом и логотипом для оформления спальни, детской или романтического интерьера",
-    "brand": "",
-    "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-k/c600/10643935052.jpg",
-    "thresholdPct": 10,
-    "notify": true,
-    "addedAt": 1794152869427,
-    "lastCheckedAt": 1794214693616,
-    "currentPrice": 215,
-    "lastNotifyPrice": 215,
-    "lastNotifiedAt": 1794214693656
-  },
-  {
     "id": "671b7d82-4760-4b76-94b5-f4b61552a98f",
     "sku": "ozon:1721723071",
     "url": "https://www.ozon.ru/product/saundbar-xiaomi-redmi-soundbar-asb02a-versiya-cn-kolonka-s-podsvetkoy-i-mikrofonom-dlya-1721723071/",
@@ -85,34 +69,6 @@
     "addedAt": 1794152869427,
     "lastCheckedAt": 1794214712276,
     "currentPrice": 4990
-  },
-  {
-    "id": "1c18073a-500e-40fd-9752-3ae0bd11c988",
-    "sku": "ozon:3033326745",
-    "url": "https://www.ozon.ru/product/nabor-stolovyh-priborov-3033326745/",
-    "name": "Набор столовых приборов",
-    "brand": "",
-    "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/multimedia-1-a/c600/7722452710.jpg",
-    "thresholdPct": 10,
-    "notify": true,
-    "addedAt": 1794152869427,
-    "lastCheckedAt": 1794214721198,
-    "currentPrice": 223
-  },
-  {
-    "id": "d135d541-c700-414a-a6ab-61436d31a2c8",
-    "sku": "ozon:853794713",
-    "url": "https://www.ozon.ru/product/pakety-dlya-vakuumatora-riflenye-vakuumnye-pakety-dlya-produktov-17h25-sm-853794713/",
-    "name": "Аксессуар для вакууматора - купить на OZON",
-    "brand": "",
-    "marketplace": "ozon",
-    "image": "https://ir.ozone.ru/s3/cms/logo/og_ozon_ru.png",
-    "thresholdPct": 10,
-    "notify": true,
-    "addedAt": 1794152869427,
-    "lastCheckedAt": 1794214730449,
-    "currentPrice": 180
   },
   {
     "id": "958a313f-6fde-4458-a6d6-c29901b62fed",
