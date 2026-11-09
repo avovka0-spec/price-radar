@@ -41,17 +41,5 @@
     "addedAt": 1794153434621,
     "lastCheckedAt": 1794243477480,
     "currentPrice": 144494
-  },
-  {
-    "id": "27cfa11d-fb16-453c-95be-3624409c1746",
-    "sku": "ali:click:anjnq1i",
-    "url": "https://ali.click/anjnq1i",
-    "name": "SZBOX FEVM FAEX1 AMD Ryzen AI MAX+395 Мини-ПК",
-    "brand": "SZBOX",
-    "marketplace": "ali",
-    "currentPrice": 306088,
-    "thresholdPct": 10,
-    "notify": true,
-    "addedAt": 1794248286051
   }
 ]
