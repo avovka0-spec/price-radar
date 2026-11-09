@@ -52,5 +52,16 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794248555957
+  },
+  {
+    "id": "6a206463-7d24-47e4-b116-f2574a09544a",
+    "sku": "ali:click:ypmnq1e",
+    "url": "Смотри, что есть на AliExpress! Мини-ПК FEVM FAEX1 Ryzen Al Max+ 395 за 168 935 ₽ - уже со скидкой 34％ https://ali.click/ypmnq1e",
+    "name": "Товар AliExpress",
+    "brand": "",
+    "marketplace": "ali",
+    "thresholdPct": 10,
+    "notify": true,
+    "addedAt": 1794248615867
   }
 ]
