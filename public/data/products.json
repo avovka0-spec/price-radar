@@ -9,7 +9,7 @@
     "thresholdPct": 3,
     "notify": true,
     "addedAt": 1793978460143,
-    "lastCheckedAt": 1794221863016,
+    "lastCheckedAt": 1794229063184,
     "currentPrice": 290849,
     "targetPrice": 280000
   },
@@ -24,7 +24,7 @@
     "thresholdPct": 3,
     "notify": true,
     "addedAt": 1794080011028,
-    "lastCheckedAt": 1794221869456,
+    "lastCheckedAt": 1794229069609,
     "currentPrice": 313493,
     "targetPrice": 300000
   },
@@ -39,8 +39,8 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794153434621,
-    "lastCheckedAt": 1794221875922,
-    "currentPrice": 144143
+    "lastCheckedAt": 1794229076024,
+    "currentPrice": 144494
   },
   {
     "id": "c7863715-e1fc-4954-af29-1dc50e4431fe",
@@ -53,8 +53,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427,
-    "lastCheckedAt": 1794221892462,
-    "currentPrice": 75
+    "lastCheckedAt": 1794229083269,
+    "currentPrice": 238,
+    "lastNotifyPrice": 238,
+    "lastNotifiedAt": 1794229083309
   },
   {
     "id": "518953de-2d80-4372-b4d7-ccf84861cc18",
@@ -67,10 +69,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427,
-    "lastCheckedAt": 1794221901312,
-    "currentPrice": 1438,
-    "lastNotifyPrice": 1438,
-    "lastNotifiedAt": 1794221901312
+    "lastCheckedAt": 1794229092180,
+    "currentPrice": 11925,
+    "lastNotifyPrice": 11925,
+    "lastNotifiedAt": 1794229092180
   },
   {
     "id": "fc926e2b-cfed-4e9e-9be3-6207cca72ac6",
@@ -83,8 +85,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427,
-    "lastCheckedAt": 1794221910177,
-    "currentPrice": 4853
+    "lastCheckedAt": 1794229101064,
+    "currentPrice": 15676,
+    "lastNotifyPrice": 15676,
+    "lastNotifiedAt": 1794229101064
   },
   {
     "id": "6f9689ec-610a-4f5d-88c5-e0f20370b76c",
@@ -97,10 +101,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427,
-    "lastCheckedAt": 1794221919047,
-    "currentPrice": 807,
-    "lastNotifyPrice": 807,
-    "lastNotifiedAt": 1794221919047
+    "lastCheckedAt": 1794229109933,
+    "currentPrice": 3474,
+    "lastNotifyPrice": 3474,
+    "lastNotifiedAt": 1794229109933
   },
   {
     "id": "9f9a75e1-e06b-4dab-b259-8f2fdc24fad0",
@@ -113,8 +117,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427,
-    "lastCheckedAt": 1794221927861,
-    "currentPrice": 205
+    "lastCheckedAt": 1794229118781,
+    "currentPrice": 299,
+    "lastNotifyPrice": 299,
+    "lastNotifiedAt": 1794229118781
   },
   {
     "id": "6ff77102-d12e-4b3c-83c3-e6cf3e271f65",
@@ -127,10 +133,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427,
-    "lastCheckedAt": 1794221936740,
-    "currentPrice": 1510,
-    "lastNotifyPrice": 1510,
-    "lastNotifiedAt": 1794221936740
+    "lastCheckedAt": 1794229127711,
+    "currentPrice": 7127,
+    "lastNotifyPrice": 7127,
+    "lastNotifiedAt": 1794229127711
   },
   {
     "id": "bf1523de-f5e2-4936-87c7-c9cced4d2b7f",
@@ -143,8 +149,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427,
-    "lastCheckedAt": 1794221946131,
-    "currentPrice": 204
+    "lastCheckedAt": 1794229137008,
+    "currentPrice": 334,
+    "lastNotifyPrice": 334,
+    "lastNotifiedAt": 1794229137008
   },
   {
     "id": "92045c8a-1e83-4805-a8b5-8ea93feb0fc7",
@@ -157,10 +165,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427,
-    "lastCheckedAt": 1794221955008,
-    "currentPrice": 2440,
-    "lastNotifyPrice": 2440,
-    "lastNotifiedAt": 1794221955008
+    "lastCheckedAt": 1794229145877,
+    "currentPrice": 19028,
+    "lastNotifyPrice": 19028,
+    "lastNotifiedAt": 1794229145878
   },
   {
     "id": "c2edf242-1061-4cac-af73-4f51220b1a68",
@@ -173,8 +181,8 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427,
-    "lastCheckedAt": 1794221963848,
-    "currentPrice": 69934
+    "lastCheckedAt": 1794229154754,
+    "currentPrice": 71757
   },
   {
     "id": "05d88f3c-3220-4a9f-9947-c02f19af6935",
@@ -187,8 +195,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427,
-    "lastCheckedAt": 1794221972704,
-    "currentPrice": 190
+    "lastCheckedAt": 1794229163621,
+    "currentPrice": 1485,
+    "lastNotifyPrice": 1485,
+    "lastNotifiedAt": 1794229163621
   },
   {
     "id": "f586439d-36e2-4948-b237-61334e679163",
@@ -201,8 +211,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427,
-    "lastCheckedAt": 1794221981582,
-    "currentPrice": 5557
+    "lastCheckedAt": 1794229172489,
+    "currentPrice": 294590,
+    "lastNotifyPrice": 294590,
+    "lastNotifiedAt": 1794229172490
   },
   {
     "id": "c1b67d0e-ca70-4c58-87bd-2ed8ece7876a",
@@ -215,10 +227,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427,
-    "lastCheckedAt": 1794221990573,
-    "currentPrice": 499,
-    "lastNotifyPrice": 499,
-    "lastNotifiedAt": 1794221990573
+    "lastCheckedAt": 1794229181388,
+    "currentPrice": 7239,
+    "lastNotifyPrice": 7239,
+    "lastNotifiedAt": 1794229181388
   },
   {
     "id": "3688cfaf-b61e-4b11-8185-befacd5bcd7e",
@@ -231,10 +243,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427,
-    "lastCheckedAt": 1794221999398,
-    "currentPrice": 771,
-    "lastNotifyPrice": 771,
-    "lastNotifiedAt": 1794221999398
+    "lastCheckedAt": 1794229190242,
+    "currentPrice": 13025,
+    "lastNotifyPrice": 13025,
+    "lastNotifiedAt": 1794229190242
   },
   {
     "id": "101fd8af-3ffd-465c-b0b0-88f6d31c24c6",
@@ -247,8 +259,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427,
-    "lastCheckedAt": 1794222017145,
-    "currentPrice": 4419
+    "lastCheckedAt": 1794229199109,
+    "currentPrice": 281990,
+    "lastNotifyPrice": 281990,
+    "lastNotifiedAt": 1794229199109
   },
   {
     "id": "2f2c1dc7-e9c5-48ca-a269-dd975d3aea4d",
@@ -261,8 +275,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427,
-    "lastCheckedAt": 1794222035026,
-    "currentPrice": 135
+    "lastCheckedAt": 1794229208014,
+    "currentPrice": 272,
+    "lastNotifyPrice": 272,
+    "lastNotifiedAt": 1794229208014
   },
   {
     "id": "7809d4c3-885f-42f8-bff6-9a4e635e12ba",
@@ -275,7 +291,9 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794152869427,
-    "lastCheckedAt": 1794222043863,
-    "currentPrice": 2091
+    "lastCheckedAt": 1794229216890,
+    "currentPrice": 6477,
+    "lastNotifyPrice": 6477,
+    "lastNotifiedAt": 1794229216890
   }
 ]
