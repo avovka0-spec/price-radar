@@ -18,6 +18,7 @@ export interface Product {
   targetPrice?: number; // ₽
   thresholdPct?: number; // % изменения для уведомления
   notify: boolean;
+  favorite?: boolean; // избранное/отложенные
   addedAt: number;
 }
 

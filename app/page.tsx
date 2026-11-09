@@ -351,6 +351,14 @@ export default function Page() {
     }
   };
 
+  const toggleFavorite = (sku: string) => {
+    const p = products.find((x) => x.sku === sku);
+    if (!p) return;
+    patch(sku, { favorite: !p.favorite });
+    setRevealedSku(null);
+    show(p.favorite ? "Убрано из отложенных" : "В отложенные");
+  };
+
   const remove = (sku: string) => {
     // Отменяем отложенный коммит настроек и убираем удаляемый товар из pending-патча,
     // иначе дебаунс может перезаписать products.json после удаления.
@@ -364,7 +372,7 @@ export default function Page() {
       return h;
     });
     setDetail(null);
-    setConfirmDeleteSku(null);
+    setRevealedSku(null);
 
     if (cfgRef.current || cfg) {
       if (!deleteQueueRef.current.some((j) => j.sku === sku)) deleteQueueRef.current.push({ sku });
@@ -395,7 +403,8 @@ export default function Page() {
   };
 
   const dProduct = useMemo(() => products.find((p) => p.sku === detail) ?? null, [products, detail]);
-  const [confirmDeleteSku, setConfirmDeleteSku] = useState<string | null>(null);
+  const [revealedSku, setRevealedSku] = useState<string | null>(null);
+  const [tab, setTab] = useState<"cart" | "search" | "favorites" | "settings">("cart");
   const [armedDelete, setArmedDelete] = useState(false);
   const [manualVal, setManualVal] = useState("");
   useEffect(() => { setArmedDelete(false); setManualVal(""); }, [detail]);
@@ -499,183 +508,212 @@ export default function Page() {
     return <main className="wrap"><Onboard onSave={saveCfg} open={showOnboard} /></main>;
   }
 
-  return (
-    <main className="wrap">
-      {(pullY > 0 || refreshing) && (
-        <div style={{
-          position: "fixed", top: 0, left: 0, right: 0, zIndex: 60,
-          display: "flex", justifyContent: "center", alignItems: "center",
-          height: 56, transform: `translateY(${Math.max(-20, pullY - 56)}px)`,
-          transition: refreshing ? "transform .2s" : "none", pointerEvents: "none",
-        }}>
-          <div style={{
-            width: 34, height: 34, borderRadius: 17,
-            background: "var(--card)", boxShadow: "0 2px 8px rgba(0,0,0,.12)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            transform: `rotate(${pullY * 3}deg)`,
-          }}>
-            {refreshing ? "⟳" : "↓"}
-          </div>
-        </div>
-      )}
-      <h1 className="h1"><span className="dot" />ЦенРадар</h1>
-      <p className="sub">Wildberries · история до 180 дней · push при изменении</p>
+  const listForTab = (t: typeof tab) => (t === "favorites" ? products.filter((p) => p.favorite) : products);
 
-      {demo && (
-        <div className="bnr">
-          <b>Демо-режим</b> — синтетические цены для просмотра интерфейса. Реальные товары подключаются после настройки GitHub в ⚙️.
-        </div>
-      )}
-
-      {cfgLoadErr && <div className="err">{cfgLoadErr}</div>}
-
-      <div className="addrow">
-        <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="Ссылка Ozon/WB или артикул"
-          inputMode="url" autoCapitalize="none" autoCorrect="off" onKeyDown={(e) => e.key === "Enter" && addProduct()} />
-        <button onClick={() => addProduct()}>＋</button>
-      </div>
-      {addErr && <div className="err">{addErr}</div>}
-
-      {products.length === 0 && (
-        <div className="empty">Пока пусто.<br />Вставьте ссылку на товар WB/Ozon/Яндекс Маркет/AliExpress выше.<br />Проверка цен — по расписанию GitHub Actions/локального агента.</div>
-      )}
-
-      {products.map((p) => {
+  const renderList = (items: Product[], emptyText: string) => (
+    <>
+      {items.length === 0 && <div className="empty">{emptyText}</div>}
+      {items.map((p) => {
         const hist = history[p.sku] ?? [];
         const autos = hist.filter((x) => !x.m);
         const prev = autos.length > 1 ? autos[autos.length - 2].p : p.currentPrice;
         const delta = p.currentPrice && prev ? ((p.currentPrice - prev) / prev) * 100 : null;
         const s = stats(p.sku);
-
-        if (confirmDeleteSku === p.sku) {
-          return (
-            <div className="card" key={p.sku} style={{ padding: 12, display: "flex", gap: 8, alignItems: "center" }}>
-              <span style={{ flex: 1, fontSize: 14 }}>Удалить «{p.name.slice(0, 40)}»?</span>
-              <button className="danger" style={{ width: "auto", padding: "8px 12px" }} onClick={() => { remove(p.sku); setConfirmDeleteSku(null); }}>Удалить</button>
-              <button className="ghost small" onClick={() => setConfirmDeleteSku(null)}>Отмена</button>
-            </div>
-          );
-        }
-
+        const revealed = revealedSku === p.sku;
         return (
-          <div className="card" key={p.sku}
-            onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; touchStartY.current = e.touches[0].clientY; }}
-            onTouchEnd={(e) => {
-              const dx = e.changedTouches[0].clientX - touchStartX.current;
-              const dy = e.changedTouches[0].clientY - touchStartY.current;
-              if (dx < -60 && Math.abs(dx) > Math.abs(dy) * 1.5) setConfirmDeleteSku(p.sku);
-            }}>
-            <div className="pcard" onClick={() => setDetail(p.sku)}>
-              {p.image ? <img src={p.image} alt="" onError={(e) => ((e.target as HTMLImageElement).style.visibility = "hidden")} /> : <div style={{ width: 56 }} />}
-              <div className="pinfo">
-                <div className="pname">{p.name}</div>
-                <div className="pbrand">
-                  {p.marketplace === "wb" && <span className="mpbadge wb">WB</span>}
-                  {p.marketplace === "ozon" && <span className="mpbadge ozon">Ozon</span>}
-                  {p.marketplace === "ym" && <span className="mpbadge ym">ЯМ</span>}
-                  {p.marketplace === "ali" && <span className="mpbadge ali">Ali</span>}
-                  {p.brand}{s?.days ? ` · ${s.days} дн. наблюдений` : ""}
+          <div className={`swipe-wrap${revealed ? " revealed" : ""}`} key={p.sku}>
+            <div className="swipe-actions" aria-hidden={!revealed}>
+              <button className="act-fav" onClick={(e) => { e.stopPropagation(); toggleFavorite(p.sku); }}>{p.favorite ? "★" : "☆"}<br /><span style={{ fontSize: 11 }}>{p.favorite ? "Убрать" : "В избранное"}</span></button>
+              <button className="act-del" onClick={(e) => { e.stopPropagation(); remove(p.sku); }}>🗑<br /><span style={{ fontSize: 11 }}>Удалить</span></button>
+            </div>
+            <div
+              className="swipe-content"
+              onTouchStart={(e) => { touchStartX.current = e.touches[0].clientX; touchStartY.current = e.touches[0].clientY; }}
+              onTouchEnd={(e) => {
+                const dx = e.changedTouches[0].clientX - touchStartX.current;
+                const dy = e.changedTouches[0].clientY - touchStartY.current;
+                if (Math.abs(dx) > Math.abs(dy) * 1.2) {
+                  if (dx < -55) setRevealedSku(p.sku);
+                  else if (dx > 40) setRevealedSku(null);
+                }
+              }}
+              onClick={() => { if (revealed) setRevealedSku(null); else setDetail(p.sku); }}
+            >
+              <div className="pcard">
+                {p.image ? <img src={p.image} alt="" onError={(e) => ((e.target as HTMLImageElement).style.visibility = "hidden")} /> : <div style={{ width: 56 }} />}
+                <div className="pinfo">
+                  <div className="pname">{p.name}{p.favorite ? <span className="fav-star">★</span> : null}</div>
+                  <div className="pbrand">
+                    {p.marketplace === "wb" && <span className="mpbadge wb">WB</span>}
+                    {p.marketplace === "ozon" && <span className="mpbadge ozon">Ozon</span>}
+                    {p.marketplace === "ym" && <span className="mpbadge ym">ЯМ</span>}
+                    {p.marketplace === "ali" && <span className="mpbadge ali">Ali</span>}
+                    {p.brand}{s?.days ? ` · ${s.days} дн. наблюдений` : ""}
+                  </div>
+                  <div className="prow">
+                    {p.currentPrice ? <span className="pprice">{fmt(p.currentPrice)}</span> : <span className="pprice" style={{ color: "var(--text2)" }}>— ₽</span>}
+                    {delta !== null && Math.abs(delta) >= 0.5 && (
+                      <span className={`pdelta ${delta < 0 ? "down" : "up"}`}>{delta < 0 ? "▼" : "▲"} {Math.abs(delta).toFixed(1)}%</span>
+                    )}
+                  </div>
                 </div>
-                <div className="prow">
-                  {p.currentPrice ? <span className="pprice">{fmt(p.currentPrice)}</span> : <span className="pprice" style={{ color: "var(--text2)" }}>— ₽</span>}
-                  {delta !== null && Math.abs(delta) >= 0.5 && (
-                    <span className={`pdelta ${delta < 0 ? "down" : "up"}`}>{delta < 0 ? "▼" : "▲"} {Math.abs(delta).toFixed(1)}%</span>
-                  )}
+                <div style={{ width: 96, flex: "none", opacity: .9 }}>
+                  {hist.length > 1 ? <svg viewBox="0 0 100 40"><MiniSpark pts={hist.slice(-60)} /></svg> : null}
                 </div>
-              </div>
-              <div style={{ width: 96, flex: "none", opacity: .9 }}>
-                {hist.length > 1 ? <svg viewBox="0 0 100 40"><MiniSpark pts={hist.slice(-60)} /></svg> : null}
               </div>
             </div>
           </div>
         );
       })}
+    </>
+  );
 
-      <div className="card">
-        <div className="pcard" onClick={() => settingsSheetOpen(true)}>
-          <div className="pinfo">
-            <div className="pname" style={{ color: "var(--accent)" }}>⚙️ Настройки · обновить · уведомления</div>
-            <div className="pbrand">репозиторий: {cfg ? `${cfg.owner}/${cfg.repo}` : "— (демо)"} · push: {cfg?.pushOn ? "вкл" : "выкл"}</div>
-          </div>
-        </div>
-      </div>
-
-      {/* ---------- Детальная карточка ---------- */}
-      {dProduct && (
-        <>
-          <div className="overlay show" onClick={() => setDetail(null)} />
-          <div className="sheet show" ref={detailSheetRef}>
-            <div
-              style={{ padding: "8px 0 2px", touchAction: "none", cursor: "grab" }}
-              aria-label="Свернуть карточку свайпом вниз"
-              {...bindSheetDrag(detailSheetRef, () => setDetail(null))}
-            >
-              <div className="grab" />
-            </div>
-            <div className="inner">
-              <div
-                className="sheettitle"
-                style={{ touchAction: "none" }}
-                {...bindSheetDrag(detailSheetRef, () => setDetail(null))}
-              >
-                <span className="t">
-                  {dProduct.marketplace === "wb" && <span className="mpbadge wb" style={{ marginRight: 6, verticalAlign: "middle" }}>WB</span>}
-                  {dProduct.marketplace === "ozon" && <span className="mpbadge ozon" style={{ marginRight: 6, verticalAlign: "middle" }}>Ozon</span>}
-                  {dProduct.marketplace === "ym" && <span className="mpbadge ym" style={{ marginRight: 6, verticalAlign: "middle" }}>ЯМ</span>}
-                  {dProduct.marketplace === "ali" && <span className="mpbadge ali" style={{ marginRight: 6, verticalAlign: "middle" }}>Ali</span>}
-                  {dProduct.brand && <b>{dProduct.brand} · </b>}{dProduct.name}
-                </span>
-                <button className="ghost small" onClick={(e) => { e.stopPropagation(); setDetail(null); }}>Готово</button>
-              </div>
-              {dProduct.currentPrice && <div style={{ fontSize: 32, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{fmt(dProduct.currentPrice)}</div>}
-              <Chart history={history} sku={dProduct.sku} />
-              {(() => { const s = stats(dProduct.sku); return (
-                <div className="statgrid">
-                  <div className="stat"><div className="v">{s?.d30 ? fmt(s.d30.min) : "—"}</div><div className="l">мин 30д</div></div>
-                  <div className="stat"><div className="v">{s?.d30 ? fmt(s.d30.avg) : "—"}</div><div className="l">сред 30д</div></div>
-                  <div className="stat"><div className="v">{s?.d30 ? fmt(s.d30.max) : "—"}</div><div className="l">макс 30д</div></div>
-                  <div className="stat"><div className="v">{s?.all ? fmt(s.all.min) : "—"}</div><div className="l">мин за всё</div></div>
-                </div>
-              ); })()}
-              <div className="row2">
-                <div className="field">
-                  <label>Целевая цена, ₽</label>
-                  <input type="number" inputMode="decimal" value={dProduct.targetPrice ?? ""} placeholder={dProduct.currentPrice ? `напр. ${Math.round(dProduct.currentPrice * .85)}` : "—"}
-                    onChange={(e) => patch(dProduct.sku, { targetPrice: e.target.value ? Number(e.target.value) : undefined })} />
-                </div>
-                <div className="field">
-                  <label>Порог изменения, %</label>
-                  <input type="number" inputMode="decimal" value={dProduct.thresholdPct ?? ""} placeholder="10"
-                    onChange={(e) => patch(dProduct.sku, { thresholdPct: e.target.value ? Number(e.target.value) : undefined })} />
-                </div>
-              </div>
-              <div className="field">
-                <label>Ввести цену вручную (полая точка на графике)</label>
-                <div className="addrow" style={{ marginBottom: 0 }}>
-                  <input inputMode="decimal" placeholder="Цена, которую вы видите, например 4990" value={manualVal} onChange={(e) => setManualVal(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addManualPoint()} />
-                  <button style={{ width: 76 }} onClick={addManualPoint}>✓</button>
-                </div>
-              </div>
-              <button className="ghost" style={{ width: "100%" }} onClick={() => patch(dProduct.sku, { notify: !dProduct.notify })}>
-                {dProduct.notify ? "🔕 Отключить уведомления" : "🔔 Включить уведомления"}
-              </button>
-              <a className="linkrow" href={dProduct.url} target="_blank" rel="noreferrer">Открыть на {dProduct.marketplace === "ym" ? "Яндекс Маркете" : dProduct.marketplace === "ozon" ? "Ozon" : dProduct.marketplace === "ali" ? "AliExpress" : "Wildberries"} ↗</a>
-              <button className="danger" onClick={() => {
-                if (!armedDelete) { setArmedDelete(true); return; }
-                remove(dProduct.sku); setArmedDelete(false);
-              }}>
-                {armedDelete ? "⚠️ Нажмите ещё раз — удалить окончательно" : "Удалить из отслеживания"}
-              </button>
-              {armedDelete && <button className="ghost small" style={{ width: "100%" }} onClick={() => setArmedDelete(false)}>Отмена</button>}
+  return (
+    <>
+      <main className="wrap has-tabs" onClick={() => { if (revealedSku) setRevealedSku(null); }}>
+        {(pullY > 0 || refreshing) && (
+          <div style={{
+            position: "fixed", top: 0, left: 0, right: 0, zIndex: 60,
+            display: "flex", justifyContent: "center", alignItems: "center",
+            height: 56, transform: `translateY(${Math.max(-20, pullY - 56)}px)`,
+            transition: refreshing ? "transform .2s" : "none", pointerEvents: "none",
+          }}>
+            <div style={{
+              width: 34, height: 34, borderRadius: 17,
+              background: "var(--card)", boxShadow: "0 2px 8px rgba(0,0,0,.12)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              transform: `rotate(${pullY * 3}deg)`,
+            }}>
+              {refreshing ? "⟳" : "↓"}
             </div>
           </div>
-        </>
-      )}
+        )}
+        <h1 className="h1"><span className="dot" />ЦенРадар</h1>
 
-      {/* ---------- Настройки ---------- */}
-      <SettingsSheet open={settingsOpen} onClose={() => settingsSheetOpen(false)} cfg={cfg} onSave={(c) => { saveCfg(c); settingsSheetOpen(false); }} onRefresh={() => cfg && loadRepo(cfg, true)} onPush={enablePush} vapid={vapid} isIos={isIos} />
-      {toast && <div className="toast">{toast}</div>}
-    </main>
+        {demo && (
+          <div className="bnr">
+            <b>Демо-режим</b> — синтетические данные. Настройте GitHub во вкладке «Настройки».
+          </div>
+        )}
+        {cfgLoadErr && <div className="err">{cfgLoadErr}</div>}
+
+        {tab === "cart" && (
+          <>
+            <p className="sub">Отслеживание цен · свайп влево — избранное/удалить</p>
+            {renderList(products, "Пока пусто. Добавьте товар во вкладке «Поиск».")}
+          </>
+        )}
+
+        {tab === "search" && (
+          <>
+            <p className="sub">Добавить товар по ссылке или артикулу</p>
+            <div className="addrow">
+              <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="Ссылка WB/Ozon/ЯМ/AliExpress (в т.ч. ali.click) или артикул"
+                inputMode="url" autoCapitalize="none" autoCorrect="off" onKeyDown={(e) => e.key === "Enter" && addProduct()} />
+              <button onClick={() => addProduct()}>＋</button>
+            </div>
+            {addErr && <div className="err">{addErr}</div>}
+            <div className="sub" style={{ marginTop: 8 }}>Можно вставить текст «Поделиться» целиком — название попробуем извлечь автоматически. После добавления товар появится в «Корзине».</div>
+            {products.length > 0 && <div className="card" style={{ padding: 12, marginTop: 12 }}><div className="pbrand">Отслеживается товаров: <b>{products.length}</b> · отложено: <b>{products.filter(p=>p.favorite).length}</b></div></div>}
+          </>
+        )}
+
+        {tab === "favorites" && (
+          <>
+            <p className="sub">Отложенные товары</p>
+            {renderList(products.filter((p) => p.favorite), "Нет отложенных. Смахните товар влево в «Корзине» и нажмите «В избранное».")}
+          </>
+        )}
+
+        {tab === "settings" && (
+          <>
+            <p className="sub">Репозиторий, токен, уведомления</p>
+            <SettingsTabView
+              cfg={cfg}
+              isIos={isIos}
+              vapid={vapid}
+              onSave={(c) => saveCfg(c)}
+              onRefresh={() => cfg && loadRepo(cfg, true)}
+              onPush={enablePush}
+            />
+          </>
+        )}
+
+        {/* ---------- Детальная карточка ---------- */}
+        {dProduct && (
+          <>
+            <div className="overlay show" onClick={() => setDetail(null)} />
+            <div className="sheet show" ref={detailSheetRef}>
+              <div style={{ padding: "8px 0 2px", touchAction: "none", cursor: "grab" }} aria-label="Свернуть карточку свайпом вниз" {...bindSheetDrag(detailSheetRef, () => setDetail(null))}>
+                <div className="grab" />
+              </div>
+              <div className="inner">
+                <div className="sheettitle" style={{ touchAction: "none" }} {...bindSheetDrag(detailSheetRef, () => setDetail(null))}>
+                  <span className="t">
+                    {dProduct.marketplace === "wb" && <span className="mpbadge wb" style={{ marginRight: 6, verticalAlign: "middle" }}>WB</span>}
+                    {dProduct.marketplace === "ozon" && <span className="mpbadge ozon" style={{ marginRight: 6, verticalAlign: "middle" }}>Ozon</span>}
+                    {dProduct.marketplace === "ym" && <span className="mpbadge ym" style={{ marginRight: 6, verticalAlign: "middle" }}>ЯМ</span>}
+                    {dProduct.marketplace === "ali" && <span className="mpbadge ali" style={{ marginRight: 6, verticalAlign: "middle" }}>Ali</span>}
+                    {dProduct.brand && <b>{dProduct.brand} · </b>}{dProduct.name}{dProduct.favorite ? <span className="fav-star"> ★</span> : null}
+                  </span>
+                  <button className="ghost small" onClick={(e) => { e.stopPropagation(); setDetail(null); }}>Готово</button>
+                </div>
+                {dProduct.currentPrice && <div style={{ fontSize: 32, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{fmt(dProduct.currentPrice)}</div>}
+                <Chart history={history} sku={dProduct.sku} />
+                {(() => { const s = stats(dProduct.sku); return (
+                  <div className="statgrid">
+                    <div className="stat"><div className="v">{s?.d30 ? fmt(s.d30.min) : "—"}</div><div className="l">мин 30д</div></div>
+                    <div className="stat"><div className="v">{s?.d30 ? fmt(s.d30.avg) : "—"}</div><div className="l">сред 30д</div></div>
+                    <div className="stat"><div className="v">{s?.d30 ? fmt(s.d30.max) : "—"}</div><div className="l">макс 30д</div></div>
+                    <div className="stat"><div className="v">{s?.all ? fmt(s.all.min) : "—"}</div><div className="l">мин за всё</div></div>
+                  </div>
+                ); })()}
+                <div className="row2">
+                  <div className="field">
+                    <label>Целевая цена, ₽</label>
+                    <input type="number" inputMode="decimal" value={dProduct.targetPrice ?? ""} placeholder={dProduct.currentPrice ? `напр. ${Math.round(dProduct.currentPrice * .85)}` : "—"}
+                      onChange={(e) => patch(dProduct.sku, { targetPrice: e.target.value ? Number(e.target.value) : undefined })} />
+                  </div>
+                  <div className="field">
+                    <label>Порог изменения, %</label>
+                    <input type="number" inputMode="decimal" value={dProduct.thresholdPct ?? ""} placeholder="10"
+                      onChange={(e) => patch(dProduct.sku, { thresholdPct: e.target.value ? Number(e.target.value) : undefined })} />
+                  </div>
+                </div>
+                <div className="field">
+                  <label>Ввести цену вручную (полая точка на графике)</label>
+                  <div className="addrow" style={{ marginBottom: 0 }}>
+                    <input inputMode="decimal" placeholder="Цена, которую вы видите, например 4990" value={manualVal} onChange={(e) => setManualVal(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addManualPoint()} />
+                    <button style={{ width: 76 }} onClick={addManualPoint}>✓</button>
+                  </div>
+                </div>
+                <button className="ghost" style={{ width: "100%", marginBottom: 8 }} onClick={() => toggleFavorite(dProduct.sku)}>{dProduct.favorite ? "★ Убрать из отложенных" : "☆ В избранное (отложенные)"}</button>
+                <button className="ghost" style={{ width: "100%" }} onClick={() => patch(dProduct.sku, { notify: !dProduct.notify })}>
+                  {dProduct.notify ? "🔕 Отключить уведомления" : "🔔 Включить уведомления"}
+                </button>
+                <a className="linkrow" href={dProduct.url} target="_blank" rel="noreferrer">Открыть на {dProduct.marketplace === "ym" ? "Яндекс Маркете" : dProduct.marketplace === "ozon" ? "Ozon" : dProduct.marketplace === "ali" ? "AliExpress" : "Wildberries"} ↗</a>
+                <button className="danger" onClick={() => {
+                  if (!armedDelete) { setArmedDelete(true); return; }
+                  remove(dProduct.sku); setArmedDelete(false);
+                }}>
+                  {armedDelete ? "⚠️ Нажмите ещё раз — удалить окончательно" : "Удалить из отслеживания"}
+                </button>
+                {armedDelete && <button className="ghost small" style={{ width: "100%" }} onClick={() => setArmedDelete(false)}>Отмена</button>}
+              </div>
+            </div>
+          </>
+        )}
+
+        {toast && <div className="toast">{toast}</div>}
+      </main>
+
+      <nav className="tabbar" aria-label="Навигация">
+        <button className={tab === "cart" ? "active" : ""} onClick={() => setTab("cart")}><span className="ico">🛒</span>Корзина</button>
+        <button className={tab === "search" ? "active" : ""} onClick={() => setTab("search")}><span className="ico">🔍</span>Поиск</button>
+        <button className={tab === "favorites" ? "active" : ""} onClick={() => setTab("favorites")}><span className="ico">♡</span>Отложенные</button>
+        <button className={tab === "settings" ? "active" : ""} onClick={() => setTab("settings")}><span className="ico">⚙️</span>Настройки</button>
+      </nav>
+    </>
   );
 }
 
@@ -688,6 +726,54 @@ function MiniSpark({ pts }: { pts: { t: number; p: number; m?: 1 }[] }) {
   const d = pts.map((x, i) => `${i ? "L" : "M"}${X(i).toFixed(1)},${Y(x.p).toFixed(1)}`).join(" ");
   const color = pts[pts.length - 1].p <= pts[0].p ? "var(--down)" : "var(--up)";
   return <path d={d} fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />;
+}
+
+/* ---- Настройки (вкладка) ---- */
+function SettingsTabView({ cfg, onSave, onRefresh, onPush, vapid, isIos }: {
+  cfg: LocalCfg | null; onSave: (c: LocalCfg) => void; onRefresh: () => void; onPush: () => void; vapid: string; isIos: boolean;
+}) {
+  const [owner, setOwner] = useState(cfg?.owner ?? "");
+  const [repo, setRepo] = useState(cfg?.repo ?? "");
+  const [token, setToken] = useState(cfg?.token ?? "");
+  const [branch, setBranch] = useState(cfg?.branch ?? "main");
+  const [tokenCheck, setTokenCheck] = useState("");
+  useEffect(() => { if (cfg) { setOwner(cfg.owner); setRepo(cfg.repo); setToken(cfg.token); setBranch(cfg.branch); } }, [cfg]);
+
+  const testToken = async () => {
+    setTokenCheck("Проверяю…");
+    try {
+      const login = await checkToken({ owner: owner.trim(), repo: repo.trim(), token: token.trim(), branch: branch.trim() || "main" });
+      setTokenCheck(`✅ Токен работает (${login})`);
+    } catch (e: any) {
+      setTokenCheck(`❌ ${e?.message ?? "Ошибка проверки токена"}`);
+    }
+  };
+
+  return (
+    <div className="card" style={{ padding: 16 }}>
+      {isIos && (
+        <div className="bnr" style={{ marginBottom: 14 }}>
+          <b>iPhone:</b> для push установите PWA на экран «Домой» (Safari → «Поделиться» → «На экран Домой»).
+        </div>
+      )}
+      <div className="row2">
+        <div className="field"><label>Владелец репо</label><input value={owner} onChange={(e) => setOwner(e.target.value)} autoCapitalize="none" /></div>
+        <div className="field"><label>Репозиторий</label><input value={repo} onChange={(e) => setRepo(e.target.value)} autoCapitalize="none" /></div>
+      </div>
+      <div className="field"><label>Ветка</label><input value={branch} onChange={(e) => setBranch(e.target.value)} autoCapitalize="none" /></div>
+      <div className="field"><label>GitHub-токен (Contents: Read and write)</label><input value={token} onChange={(e) => setToken(e.target.value)} type="password" autoCapitalize="none" autoCorrect="off" /></div>
+      <div className="sub" style={{ marginTop: -4, marginBottom: 8 }}>Токен нужен для добавления/изменения/удаления товаров. Чтение публичного репозитория работает и без него.</div>
+      <button className="ghost" style={{ width: "100%" }} disabled={!token} onClick={testToken}>Проверить токен</button>
+      {tokenCheck && <div className="sub" style={{ marginTop: 6 }}>{tokenCheck}</div>}
+      <div style={{ height: 8 }} />
+      <button style={{ width: "100%" }} onClick={() => onSave({ owner: owner.trim(), repo: repo.trim(), token: token.trim(), branch: branch.trim() || "main" })}>Сохранить конфигурацию</button>
+      <div style={{ height: 12 }} />
+      <button className="ghost" style={{ width: "100%" }} onClick={onRefresh}>🔄 Обновить цены из репозитория</button>
+      <div style={{ height: 8 }} />
+      <button style={{ width: "100%" }} onClick={onPush}>{vapid ? "🔔 Включить push-уведомления" : "🔔 Push: ключ не задан (README)"}</button>
+      <a className="linkrow" href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noreferrer">Создать GitHub-токен ↗</a>
+    </div>
+  );
 }
 
 /* ---- Онбординг (GitHub-конфигурация) ---- */
