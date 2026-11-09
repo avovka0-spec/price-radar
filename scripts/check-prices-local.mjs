@@ -271,9 +271,17 @@ async function fetchGenericPage(page, p, url, opts = {}) {
       while ((m = re.exec(txt)) && scriptPrices.length < 40) scriptPrices.push(m[1]);
     }
 
+    // Таможенный сбор/пошлина (best-effort, напр. AliExpress): ищем в видимом тексте и небольших элементах.
+    const customsHits = [];
+    try {
+      const re = /(?:таможенн\w*[\s\S]{0,25}?(?:сбор|пошлин)\w*|(?:сбор|пошлин)\w*[\s\S]{0,25}?таможенн\w*)[^0-9]{0,30}(\d[\d\s\u00a0]{1,12})\s*₽/gi;
+      let mm;
+      while ((mm = re.exec(body)) && customsHits.length < 5) customsHits.push(mm[1]);
+    } catch {}
+
     return {
       title, ogTitle, h1, ogImage, image: img ? (img.currentSrc || img.src || "") : "",
-      metaPrice, ldPrices, priceEls, scriptPrices, body, url: location.href,
+      metaPrice, ldPrices, priceEls, scriptPrices, customsHits, body, url: location.href,
     };
   });
 
@@ -320,8 +328,18 @@ async function fetchGenericPage(page, p, url, opts = {}) {
     const sample = (ex.priceEls || []).slice(0, 6).map((x) => `${x.t}${x.strike ? "(s)" : ""}`).join("|");
     log(`parse miss ${m} ${p.sku}: price=${price} prev=${prevRef} prices=[${sample}] ld=[${(ex.ldPrices||[]).slice(0,3).join(",")}] name="${name.slice(0, 80)}" antibot=${antibot}`);
   }
+  let dutyPrice;
+  if (Array.isArray(ex.customsHits) && ex.customsHits.length) {
+    const vals = ex.customsHits.map((v) => toNum(v)).filter((n) => n > 0 && n < Math.max(500000, price * 2));
+    // Берём наиболее частое/разумное; обычно одно значение. Отсекаем слишком большие (не сбор).
+    if (vals.length) {
+      const pick = vals.sort((a, b) => a - b)[0];
+      if (pick > 0 && pick < (price || Infinity)) dutyPrice = Math.round(pick);
+    }
+  }
+
   if (!price) return null;
-  return { name: name || p.name || String(p.sku), brand: p.brand || "", price, image: clean(ex.ogImage) || clean(ex.image) || undefined, antibot };
+  return { name: name || p.name || String(p.sku), brand: p.brand || "", price, dutyPrice, image: clean(ex.ogImage) || clean(ex.image) || undefined, antibot };
 }
 
 async function fetchMarketCard(ctx, p){
@@ -475,12 +493,13 @@ async function sendPush(notes, removed, subs, vapidReady) {
         continue;
       }
 
-      if (p.name !== card.name || p.brand !== card.brand || (card.image && p.image !== card.image)) {
+      if (p.name !== card.name || p.brand !== card.brand || (card.image && p.image !== card.image) || (card.dutyPrice != null && p.dutyPrice !== card.dutyPrice)) {
         changed = true;
       }
       p.name = card.name || p.name;
       p.brand = card.brand || p.brand;
       if (card.image) p.image = card.image;
+      if (card.dutyPrice != null) p.dutyPrice = card.dutyPrice;
 
       const was = p.currentPrice;
       p.currentPrice = card.price;
@@ -556,10 +575,10 @@ async function sendPush(notes, removed, subs, vapidReady) {
     const checkedBySku = new Map(products.map((p) => [String(p.sku), p]));
     const checkerFields = (u) => {
       const out = {};
-      for (const k of ["name","brand","image","marketplace","currentPrice","lastCheckedAt","lastNotifiedAt","lastNotifyPrice","url","sku","id"]) {
+      for (const k of ["name","brand","image","marketplace","currentPrice","lastCheckedAt","lastNotifiedAt","lastNotifyPrice","dutyPrice","url","sku","id"]) {
         if (u[k] !== undefined) out[k] = u[k];
       }
-      // Настройки пользователя (targetPrice/thresholdPct/notify/addedAt) берём из fresh, если есть,
+      // Настройки пользователя (targetPrice/thresholdPct/notify/addedAt/favorite/abroad) берём из fresh, если есть,
       // чтобы не затереть изменения из UI, сделанные параллельно.
       return out;
     };

@@ -558,8 +558,9 @@ export default function Page() {
                     )}
                   </div>
                   {(() => {
-                    if (p.marketplace !== "ali") return null;
-                    if (p.dutyPrice) return <div className="duty-line">+ пошлина {fmt(p.dutyPrice)}</div>;
+                    const foreign = p.abroad || p.marketplace === "ali";
+                    if (!foreign) return null;
+                    if (p.dutyPrice) return <div className="duty-line">+ таможенный сбор {fmt(p.dutyPrice)}</div>;
                     if (p.currentPrice) {
                       const d = estimateDutyRub(p.currentPrice, eurRate);
                       if (d > 0) return <div className="duty-line">≈ +пошлина {fmt(d)} (14,3% сверх 200 €)</div>;
@@ -708,6 +709,23 @@ export default function Page() {
                     <button style={{ width: 76 }} onClick={addManualPoint}>✓</button>
                   </div>
                 </div>
+                {dProduct.marketplace !== "ali" && (
+                  <button className="ghost" style={{ width: "100%", marginBottom: 8 }} onClick={() => patch(dProduct.sku, { abroad: !dProduct.abroad })}>
+                    {dProduct.abroad ? "🌍 Товар из-за рубежа: да (оценка пошлины)" : "🌍 Товар из-за рубежа: нет"}
+                  </button>
+                )}
+                {(dProduct.abroad || dProduct.marketplace === "ali") && (
+                  <div className="field" style={{ marginBottom: 8 }}>
+                    <label>Таможенный сбор, ₽ (если взимается; Ali — из карточки)</label>
+                    <input type="number" inputMode="decimal" value={dProduct.dutyPrice ?? ""} placeholder="авто / не задано"
+                      onChange={(e) => patch(dProduct.sku, { dutyPrice: e.target.value ? Number(e.target.value) : undefined })} />
+                    {(() => {
+                      if (dProduct.dutyPrice || !dProduct.currentPrice) return null;
+                      const d = estimateDutyRub(dProduct.currentPrice, eurRate);
+                      return <div className="sub" style={{ marginTop: 4 }}>{d > 0 ? `Оценка: ≈ ${fmt(d)} (14,3% сверх 200 €, курс ${eurRate} ₽/€)` : `Оценка: без пошлины (≤ 200 € при курсе ${eurRate} ₽/€)`}</div>;
+                    })()}
+                  </div>
+                )}
                 <button className="ghost" style={{ width: "100%", marginBottom: 8 }} onClick={() => toggleFavorite(dProduct.sku)}>{dProduct.favorite ? "★ Убрать из отложенных" : "☆ В избранное (отложенные)"}</button>
                 <button className="ghost" style={{ width: "100%" }} onClick={() => patch(dProduct.sku, { notify: !dProduct.notify })}>
                   {dProduct.notify ? "🔕 Отключить уведомления" : "🔔 Включить уведомления"}

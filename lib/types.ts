@@ -19,7 +19,9 @@ export interface Product {
   thresholdPct?: number; // % изменения для уведомления
   notify: boolean;
   favorite?: boolean; // избранное/отложенные
-  /** Пошлина/доп. расходы для зарубежных товаров (₽), если известны */
+  /** Товар из-за рубежа (ручной признак для WB/Ozon/ЯМ; Ali считается зарубежным по умолчанию) */
+  abroad?: boolean;
+  /** Фактический таможенный сбор/пошлина (₽), если известен (напр. из карточки AliExpress) */
   dutyPrice?: number;
   addedAt: number;
 }
