@@ -34,10 +34,22 @@ function apiError(status: number, body: string) {
   return `GitHub API ${status}: ${body.slice(0, 200)}`;
 }
 
+function withTimeout(ms = 25000) {
+  try {
+    return AbortSignal.timeout(ms);
+  } catch {
+    return undefined;
+  }
+}
+
 async function ghJson<T>(cfg: GhConfig, path: string, init?: RequestInit): Promise<T> {
   const url = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}?ref=${cfg.branch}`;
   const request = (token: string) =>
-    fetch(url, { ...init, headers: { ...headers(token), ...(init?.headers ?? {}) } });
+    fetch(url, {
+      ...init,
+      signal: init?.signal ?? withTimeout(25000),
+      headers: { ...headers(token), ...(init?.headers ?? {}) },
+    });
 
   let res = await request(cfg.token);
   // Публичный репозиторий можно читать без токена. Если токен протух или отозван,
@@ -53,14 +65,14 @@ async function ghJson<T>(cfg: GhConfig, path: string, init?: RequestInit): Promi
 /** Проверяет токен и доступ к Contents (кнопка «Проверить токен»). */
 export async function checkToken(cfg: GhConfig): Promise<string> {
   if (!cfg.token) throw new Error("Токен не задан");
-  const res = await fetch("https://api.github.com/user", { headers: headers(cfg.token) });
+  const res = await fetch("https://api.github.com/user", { headers: headers(cfg.token), signal: withTimeout(15000) });
   if (!res.ok) throw new GhError(res.status, apiError(res.status, await res.text()));
   const user = (await res.json()) as { login?: string };
 
   // Проверяем именно доступ к файлам: токен с правами только Issues сюда не подойдёт.
   const repoRes = await fetch(
     `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/public/data/products.json?ref=${cfg.branch}`,
-    { headers: headers(cfg.token) },
+    { headers: headers(cfg.token), signal: withTimeout(15000) },
   );
   if (!repoRes.ok) {
     throw new GhError(
@@ -94,6 +106,7 @@ async function putContent(cfg: GhConfig, path: string, data: unknown, message: s
   return fetch(`https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${path}`, {
     method: "PUT",
     headers: { ...headers(cfg.token), "Content-Type": "application/json" },
+    signal: withTimeout(25000),
     body: JSON.stringify({
       message,
       content: encodeContent(data),

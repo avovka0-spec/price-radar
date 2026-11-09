@@ -176,8 +176,31 @@ async function fetchWbPage(page, sku, url){
   return { name, brand, price, image: clean(data.ogImage) || clean(data.image) };
 }
 
-async function fetchGenericPage(page, p, url, opts={}){
+function pickPlausiblePrice(candidates, prevPrice) {
+  const nums = [...new Set(candidates.map((n) => Math.round(Number(n) || 0)).filter((n) => n > 0))];
+  if (!nums.length) return 0;
+  if (nums.length === 1) return nums[0];
+  const sorted = [...nums].sort((a, b) => a - b);
+  // Если есть предыдущая цена/история, отбрасываем явный мусор (бонусы, "1 ₽", рассрочка).
+  // Якорь считаем ненадёжным, если он сам похож на ошибку парсинга (слишком мал).
+  const anchor = prevPrice >= 50 ? prevPrice : 0;
+  if (anchor > 0) {
+    const plausible = sorted.filter((n) => n >= Math.max(2, anchor * 0.08) && n <= anchor * 8);
+    if (plausible.length) return plausible[0];
+    // Если якорь не помог (редкий случай резкой смены цены), не возвращаем мусор — пробуем без якоря.
+  }
+  // Без надёжного якоря: убираем экстремально малые выбросы относительно основной группы.
+  const hi = sorted[sorted.length - 1];
+  const tail = sorted.filter((n) => n >= Math.max(10, hi * 0.03));
+  const pool = tail.length ? tail : sorted.filter((n) => n >= Math.max(2, hi * 0.01));
+  const finalPool = pool.length ? pool : sorted;
+  // Часто [текущая, старая/зачёркнутая] — текущая обычно среди наименьших в правдоподобной группе.
+  return finalPool.length > 1 ? Math.min(...finalPool.slice(0, Math.min(3, finalPool.length))) : finalPool[0];
+}
+
+async function fetchGenericPage(page, p, url, opts = {}) {
   const m = (p.marketplace || "").toLowerCase();
+  const prevRef = Number(p._priceRef || p.currentPrice || 0);
   try {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
   } catch (e) {
@@ -186,34 +209,117 @@ async function fetchGenericPage(page, p, url, opts={}){
   await page.waitForTimeout(opts.waitMs ?? 4500);
   const ex = await page.evaluate(() => {
     const norm = (s) => String(s || "").replace(/\s+/g, " ").trim();
-    const body = norm(document.body?.innerText || "").slice(0, 12000);
+    const body = norm(document.body?.innerText || "").slice(0, 14000);
     const title = document.title || "";
     const ogTitle = document.querySelector('meta[property="og:title"]')?.getAttribute("content") || "";
     const h1 = norm(document.querySelector("h1")?.textContent);
     const ogImage = document.querySelector('meta[property="og:image"]')?.getAttribute("content") || "";
-    const img = document.querySelector('img[src*="ir.ozone"],img[src*="avatars.mds.yandex"],img[src*="alicdn"],img[src*="ae-pic"],img[src*="/images/"],main img,img') || null;
-    // кандидаты цен: короткие элементы с ₽ (чаще всего цена товара)
-    const priceEls = Array.from(document.querySelectorAll("span,div,strong,p"))
-      .map(e => norm(e.textContent)).filter(t => /^\d[\d\s\u00a0]*\s*₽$/.test(t)).slice(0, 30);
-    return { title, ogTitle, h1, ogImage, image: img ? (img.currentSrc || img.src || "") : "", priceEls, body, url: location.href };
+    const img =
+      document.querySelector('img[src*="ir.ozone"],img[src*="avatars.mds.yandex"],img[src*="alicdn"],img[src*="ae-pic"],img[src*="/images/"],main img,img') || null;
+    const metaPrice = norm(document.querySelector('meta[property="product:price:amount"]')?.getAttribute("content"));
+
+    // JSON-LD: самый надёжный источник цены карточки, если он есть.
+    const ldPrices = [];
+    const ldNodes = Array.from(document.querySelectorAll('script[type="application/ld+json"]'));
+    for (const n of ldNodes.slice(0, 12)) {
+      try {
+        const j = JSON.parse(n.textContent || "null");
+        const stack = [j];
+        while (stack.length) {
+          const v = stack.pop();
+          if (!v) continue;
+          if (Array.isArray(v)) { stack.push(...v); continue; }
+          if (typeof v === "object") {
+            if (v.price != null) ldPrices.push(String(v.price));
+            if (v.lowPrice != null) ldPrices.push(String(v.lowPrice));
+            if (v.highPrice != null) ldPrices.push(String(v.highPrice));
+            for (const k of Object.keys(v)) stack.push(v[k]);
+          }
+        }
+      } catch {}
+    }
+
+    // DOM-кандидаты с ₽: берём метаданные, чтобы отсеять зачёркнутые/скрытые/мусорные мелочи.
+    const priceEls = Array.from(document.querySelectorAll("span,div,strong,p,b"))
+      .map((e) => {
+        const t = norm(e.textContent);
+        if (!/^\d[\d\s\u00a0]*\s*₽$/.test(t) || t.length > 20) return null;
+        const st = getComputedStyle(e);
+        const r = e.getBoundingClientRect();
+        if (st.display === "none" || st.visibility === "hidden" || Number(st.opacity || 1) < 0.05) return null;
+        if (r.width < 8 || r.height < 8) return null;
+        const dec = `${st.textDecorationLine || ""} ${st.textDecoration || ""}`.toLowerCase();
+        return {
+          t,
+          strike: dec.includes("line-through"),
+          fs: parseFloat(st.fontSize || "0") || 0,
+          fw: parseInt(st.fontWeight || "400", 10) || 400,
+          area: Math.round(r.width * r.height),
+        };
+      })
+      .filter(Boolean)
+      .slice(0, 80);
+
+    // Фрагменты встроенного JSON в script (Ozon/SPA часто хранят цену там).
+    const scriptPrices = [];
+    const scripts = Array.from(document.scripts || []).slice(0, 25);
+    for (const s of scripts) {
+      const txt = String(s.textContent || "");
+      if (txt.length < 40 || txt.length > 250000) continue;
+      let m;
+      const re = /"(?:price|finalPrice|webPrice|cardPrice|marketingPrice|originalPrice|discountedPrice)"\s*:\s*"?(\d[\d\s\u00a0]{0,12})"?/g;
+      while ((m = re.exec(txt)) && scriptPrices.length < 40) scriptPrices.push(m[1]);
+    }
+
+    return {
+      title, ogTitle, h1, ogImage, image: img ? (img.currentSrc || img.src || "") : "",
+      metaPrice, ldPrices, priceEls, scriptPrices, body, url: location.href,
+    };
   });
-  const antibot = /captcha|smartcaptcha|робот|подтвердите|доступ ограничен|verify you are human|blocked|punish/i.test(ex.title + " " + ex.body) || /captcha|punish/i.test(ex.body);
-  const nums = ex.priceEls.map(parsePrice).filter(n => n > 0);
-  // эвристика: на карточке часто первая/минимальная видимая цена — текущая; берём разумную (не 0, не огромный выброс если есть несколько)
-  let price = 0;
-  if (nums.length === 1) price = nums[0];
-  else if (nums.length > 1) {
-    const sorted = [...nums].sort((a,b)=>a-b);
-    // часто: [текущая, старая] или [текущая, старая, ещё] — текущая обычно меньше зачёркнутой; берём min среди первых 3
-    price = Math.min(...sorted.slice(0, Math.min(3, sorted.length)));
+
+  const antibot = /captcha|smartcaptcha|робот|подтвердите|доступ ограничен|verify you are human|blocked|punish/i.test(ex.title + " " + ex.body) || /captcha|punish/i.test(ex.url);
+
+  const toNum = (v) => {
+    const s = String(v ?? "").replace(/\u00a0/g, " ").trim();
+    if (!s) return 0;
+    // JSON-LD/meta могут отдавать "279170.00" — берём рубли, не склеиваем копейки.
+    const m = s.match(/(\d[\d\s]*)(?:[.,]\d+)?/);
+    if (!m) return 0;
+    const n = Number(m[1].replace(/[^\d]/g, ""));
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  };
+
+  // Приоритет: JSON-LD/meta -> незачёркнутые заметные DOM-цены -> встроенный JSON -> любые DOM.
+  const ldNums = [...(ex.ldPrices || []), ex.metaPrice].map(toNum).filter(Boolean);
+  let price = pickPlausiblePrice(ldNums, prevRef);
+
+  if (!price) {
+    const dom = (ex.priceEls || []).filter((x) => x && !x.strike).map((x) => ({ n: toNum(x.t), ...x })).filter((x) => x.n > 0);
+    dom.sort((a, b) => (b.fs - a.fs) || (b.fw - a.fw) || (b.area - a.area));
+    // Берём верх заметных элементов (обычно текущая цена крупнее старой/мелочей), затем фильтруем правдоподобность.
+    const top = dom.slice(0, 8).map((x) => x.n);
+    price = pickPlausiblePrice(top, prevRef);
+    if (!price) price = pickPlausiblePrice(dom.map((x) => x.n), prevRef);
   }
+
+  if (!price) price = pickPlausiblePrice((ex.scriptPrices || []).map(toNum).filter(Boolean), prevRef);
+
+  if (!price) {
+    const anyDom = (ex.priceEls || []).map((x) => toNum(x?.t)).filter(Boolean);
+    price = pickPlausiblePrice(anyDom, prevRef);
+  }
+
   let name = clean(ex.h1) || clean(ex.ogTitle) || clean(ex.title)
     .replace(/\s*[|—-]\s*(OZON|Ozon|Яндекс Маркет|AliExpress|АлиЭкспресс).*$/i, "")
     .replace(/\s*купить.*$/i, "")
     .trim();
   if (/^ozon|^яндекс маркет|^aliexpress|^алиэкспресс/i.test(name)) name = clean(ex.h1) || name;
+
   if (antibot) log(`antibot/captcha hint ${m} ${p.sku}: title="${ex.title}"`);
-  if (!price || !name) log(`parse miss ${m} ${p.sku}: price=${price} prices=[${ex.priceEls.slice(0,5).join("|")}] name="${name.slice(0,80)}" antibot=${antibot}`);
+  if (!price || !name) {
+    const sample = (ex.priceEls || []).slice(0, 6).map((x) => `${x.t}${x.strike ? "(s)" : ""}`).join("|");
+    log(`parse miss ${m} ${p.sku}: price=${price} prev=${prevRef} prices=[${sample}] ld=[${(ex.ldPrices||[]).slice(0,3).join(",")}] name="${name.slice(0, 80)}" antibot=${antibot}`);
+  }
   if (!price) return null;
   return { name: name || p.name || String(p.sku), brand: p.brand || "", price, image: clean(ex.ogImage) || clean(ex.image) || undefined, antibot };
 }
@@ -355,7 +461,13 @@ async function sendPush(notes, removed, subs, vapidReady) {
     for (let i = 0; i < runList.length; i++) {
       const p = runList[i];
       const m = (p.marketplace || "wb").toLowerCase();
+      // Надёжный якорь для анти-мусорной фильтрации цены: последний авто-пойнт истории
+      // (игнорируем крошечные значения, похожие на прошлые ошибки парсинга).
+      const histPts = (history[p.sku] ?? []).filter((x) => !x.m && Number(x.p) >= 50).map((x) => Number(x.p));
+      const goodHist = histPts.length ? histPts[histPts.length - 1] : 0;
+      if (goodHist && !(Number(p.currentPrice) >= 50)) p._priceRef = goodHist;
       const card = await fetchMarketCard(ctx, p);
+      try { delete p._priceRef; } catch {}
       p.lastCheckedAt = Date.now();
       if (!card) {
         log(`no card: [${m}] ${p.sku}`);

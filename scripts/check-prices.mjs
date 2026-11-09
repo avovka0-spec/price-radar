@@ -60,7 +60,14 @@ async function sendPush(notes, removedSubs) {
 }
 
 for (const p of products) {
-  const card = await fetchCard(p.sku);
+  const mp = (p.marketplace || "wb").toLowerCase();
+  if (mp !== "wb") {
+    // Ozon/ЯМ/Ali проверяются локальным браузерным воркером (check-prices-local.mjs).
+    // GitHub Actions не умеет надёжно получать их цены и не должен перетирать данные.
+    continue;
+  }
+  const numericSku = String(p.sku || "").replace(/^wb:/, "");
+  const card = await fetchCard(numericSku);
   p.lastCheckedAt = Date.now();
   if (!card) { console.log(`no card: ${p.sku}`); continue; }
   p.name = card.name || p.name;

@@ -214,6 +214,52 @@ export default function Page() {
   }, [cfg]);
   useEffect(() => { if (detail === null) void flushPatchCommit(); }, [detail, flushPatchCommit]);
 
+  // Очередь постепенного удаления: быстрые параллельные операции по GitHub Contents API
+  // дают конфликты SHA/таймауты, поэтому удаляем товары последовательно с паузами.
+  const deleteQueueRef = useRef<{ sku: string }[]>([]);
+  const deleteBusyRef = useRef(false);
+  const cfgRef = useRef<LocalCfg | null>(null);
+  const loadRepoRef = useRef(loadRepo);
+  const showRef = useRef(show);
+  useEffect(() => { cfgRef.current = cfg; }, [cfg]);
+  useEffect(() => { loadRepoRef.current = loadRepo; }, [loadRepo]);
+  useEffect(() => { showRef.current = show; }, [show]);
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const processDeleteQueue = useCallback(async () => {
+    if (deleteBusyRef.current) return;
+    deleteBusyRef.current = true;
+    try {
+      while (deleteQueueRef.current.length) {
+        const job = deleteQueueRef.current.shift();
+        if (!job) break;
+        const c = cfgRef.current;
+        if (!c) continue;
+        const sku = job.sku;
+        try {
+          await updateRepoJson<{ products?: Product[] } | Product[]>(c, "public/data/products.json", `Удалён ${sku}`, (cur) => {
+            const list = Array.isArray(cur) ? cur : cur?.products ?? [];
+            return list.filter((p) => p.sku !== sku);
+          });
+          await sleep(500);
+          await updateRepoJson<History>(c, "public/data/history.json", `История: удалён ${sku}`, (cur) => {
+            const h = { ...(cur ?? {}) };
+            delete h[sku];
+            return h;
+          });
+          showRef.current(deleteQueueRef.current.length ? `Удалено: ${sku} (в очереди: ${deleteQueueRef.current.length})` : "Удалено");
+        } catch (err: any) {
+          const msg = err?.message ? String(err.message) : "ошибка записи";
+          showRef.current(`Не сохранено в GitHub: ${msg.slice(0, 140)}`);
+          await loadRepoRef.current(c, false).catch(() => {});
+        }
+        if (deleteQueueRef.current.length) await sleep(700);
+      }
+    } finally {
+      deleteBusyRef.current = false;
+      if (deleteQueueRef.current.length) void processDeleteQueue();
+    }
+  }, []);
+
   // --- добавление товара ---
   const addProduct = async (overrideUrl?: string) => {
     setAddErr("");
@@ -299,36 +345,26 @@ export default function Page() {
   };
 
   const remove = (sku: string) => {
-    // отменяем отложенный коммит настроек, иначе он может перезаписать products.json после удаления
+    // Отменяем отложенный коммит настроек и убираем удаляемый товар из pending-патча,
+    // иначе дебаунс может перезаписать products.json после удаления.
     if (patchCommitRef.current) { clearTimeout(patchCommitRef.current); patchCommitRef.current = null; }
-    pendingProductsRef.current = null;
-    const next = products.filter((p) => p.sku !== sku);
-    const his = { ...history };
-    delete his[sku];
-    setProducts(next);
-    setHistory(his);
+    if (pendingProductsRef.current) pendingProductsRef.current = pendingProductsRef.current.filter((p) => p.sku !== sku);
+
+    setProducts((prev) => prev.filter((p) => p.sku !== sku));
+    setHistory((prev) => {
+      const h = { ...prev };
+      delete h[sku];
+      return h;
+    });
     setDetail(null);
-    if (cfg) {
-      void (async () => {
-        const [a, b] = await Promise.allSettled([
-          updateRepoJson<{ products?: Product[] } | Product[]>(cfg, "public/data/products.json", `Удалён ${sku}`, (cur) => {
-            const list = Array.isArray(cur) ? cur : cur?.products ?? [];
-            return list.filter((p) => p.sku !== sku);
-          }),
-          updateRepoJson<History>(cfg, "public/data/history.json", `История: удалён ${sku}`, (cur) => {
-            const h = { ...(cur ?? {}) };
-            delete h[sku];
-            return h;
-          }),
-        ]);
-        const err = [a, b].find((r): r is PromiseRejectedResult => r.status === "rejected")?.reason;
-        if (err) {
-          const msg = err?.message ? String(err.message) : "ошибка записи";
-          show(`Не сохранено в GitHub: ${msg.slice(0, 140)}`);
-          // подтянем актуальное состояние, чтобы UI не расходился с репозиторием
-          await loadRepo(cfg, false).catch(() => {});
-        } else show("Удалено");
-      })();
+    setConfirmDeleteSku(null);
+
+    if (cfgRef.current || cfg) {
+      if (!deleteQueueRef.current.some((j) => j.sku === sku)) deleteQueueRef.current.push({ sku });
+      if (deleteQueueRef.current.length > 1) show(`В очереди удаления: ${deleteQueueRef.current.length}`);
+      void processDeleteQueue();
+    } else {
+      show("Удалено");
     }
   };
 
@@ -356,6 +392,51 @@ export default function Page() {
   const [armedDelete, setArmedDelete] = useState(false);
   const [manualVal, setManualVal] = useState("");
   useEffect(() => { setArmedDelete(false); setManualVal(""); }, [detail]);
+
+  // Свайп вниз по «ползунку»/шапке для сворачивания bottom-sheet.
+  const detailSheetRef = useRef<HTMLDivElement | null>(null);
+  const settingsSheetRef = useRef<HTMLDivElement | null>(null);
+  const sheetDrag = useRef<{ y: number; t: number; active: boolean; moved: boolean }>({ y: 0, t: 0, active: false, moved: false });
+  const bindSheetDrag = (ref: React.MutableRefObject<HTMLDivElement | null>, onClose: () => void) => ({
+    onTouchStart: (e: React.TouchEvent) => {
+      const el = ref.current;
+      if (!el) return;
+      sheetDrag.current = { y: e.touches[0].clientY, t: Date.now(), active: true, moved: false };
+      el.style.transition = "none";
+    },
+    onTouchMove: (e: React.TouchEvent) => {
+      const el = ref.current;
+      if (!el || !sheetDrag.current.active) return;
+      const dy = e.touches[0].clientY - sheetDrag.current.y;
+      if (dy <= 0) {
+        el.style.transform = "translateY(0px)";
+        return;
+      }
+      sheetDrag.current.moved = true;
+      el.style.transform = `translateY(${dy}px)`;
+      e.preventDefault();
+    },
+    onTouchEnd: (e: React.TouchEvent) => {
+      const el = ref.current;
+      if (!el || !sheetDrag.current.active) return;
+      const dy = Math.max(0, e.changedTouches[0].clientY - sheetDrag.current.y);
+      const dt = Math.max(1, Date.now() - sheetDrag.current.t);
+      const velocity = dy / dt;
+      sheetDrag.current.active = false;
+      el.style.transition = "";
+      if (dy > 90 || (dy > 35 && velocity > 0.45)) {
+        el.style.transform = "";
+        onClose();
+      } else {
+        el.style.transform = "";
+      }
+    },
+    onTouchCancel: () => {
+      const el = ref.current;
+      sheetDrag.current.active = false;
+      if (el) { el.style.transition = ""; el.style.transform = ""; }
+    },
+  });
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const addManualPoint = async () => {
@@ -516,10 +597,20 @@ export default function Page() {
       {dProduct && (
         <>
           <div className="overlay show" onClick={() => setDetail(null)} />
-          <div className="sheet show">
-            <div className="grab" />
+          <div className="sheet show" ref={detailSheetRef}>
+            <div
+              style={{ padding: "8px 0 2px", touchAction: "none", cursor: "grab" }}
+              aria-label="Свернуть карточку свайпом вниз"
+              {...bindSheetDrag(detailSheetRef, () => setDetail(null))}
+            >
+              <div className="grab" />
+            </div>
             <div className="inner">
-              <div className="sheettitle">
+              <div
+                className="sheettitle"
+                style={{ touchAction: "none" }}
+                {...bindSheetDrag(detailSheetRef, () => setDetail(null))}
+              >
                 <span className="t">
                   {dProduct.marketplace === "wb" && <span className="mpbadge wb" style={{ marginRight: 6, verticalAlign: "middle" }}>WB</span>}
                   {dProduct.marketplace === "ozon" && <span className="mpbadge ozon" style={{ marginRight: 6, verticalAlign: "middle" }}>Ozon</span>}
@@ -527,7 +618,7 @@ export default function Page() {
                   {dProduct.marketplace === "ali" && <span className="mpbadge ali" style={{ marginRight: 6, verticalAlign: "middle" }}>Ali</span>}
                   {dProduct.brand && <b>{dProduct.brand} · </b>}{dProduct.name}
                 </span>
-                <button className="ghost small" onClick={() => setDetail(null)}>Готово</button>
+                <button className="ghost small" onClick={(e) => { e.stopPropagation(); setDetail(null); }}>Готово</button>
               </div>
               {dProduct.currentPrice && <div style={{ fontSize: 32, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{fmt(dProduct.currentPrice)}</div>}
               <Chart history={history} sku={dProduct.sku} />
@@ -626,6 +717,7 @@ function SettingsSheet({ open, onClose, cfg, onSave, onRefresh, onPush, vapid, i
   const [branch, setBranch] = useState(cfg?.branch ?? "main");
   const [tokenCheck, setTokenCheck] = useState("");
   useEffect(() => { if (open && cfg) { setOwner(cfg.owner); setRepo(cfg.repo); setToken(cfg.token); setBranch(cfg.branch); setTokenCheck(""); } }, [open, cfg]);
+  useEffect(() => { if (open && sheetRef.current) sheetRef.current.style.transform = ""; }, [open]);
 
   const testToken = async () => {
     setTokenCheck("Проверяю…");
@@ -636,13 +728,45 @@ function SettingsSheet({ open, onClose, cfg, onSave, onRefresh, onPush, vapid, i
       setTokenCheck(`❌ ${e?.message ?? "Ошибка проверки токена"}`);
     }
   };
+  const sheetRef = useRef<HTMLDivElement | null>(null);
+  const drag = useRef<{ y: number; t: number; active: boolean }>({ y: 0, t: 0, active: false });
+  const dragBind = {
+    onTouchStart: (e: React.TouchEvent) => {
+      const el = sheetRef.current; if (!el) return;
+      drag.current = { y: e.touches[0].clientY, t: Date.now(), active: true };
+      el.style.transition = "none";
+    },
+    onTouchMove: (e: React.TouchEvent) => {
+      const el = sheetRef.current; if (!el || !drag.current.active) return;
+      const dy = e.touches[0].clientY - drag.current.y;
+      if (dy <= 0) { el.style.transform = "translateY(0px)"; return; }
+      el.style.transform = `translateY(${dy}px)`;
+      e.preventDefault();
+    },
+    onTouchEnd: (e: React.TouchEvent) => {
+      const el = sheetRef.current; if (!el || !drag.current.active) return;
+      const dy = Math.max(0, e.changedTouches[0].clientY - drag.current.y);
+      const dt = Math.max(1, Date.now() - drag.current.t);
+      drag.current.active = false;
+      el.style.transition = "";
+      if (dy > 90 || (dy > 35 && dy / dt > 0.45)) { el.style.transform = ""; onClose(); }
+      else el.style.transform = "";
+    },
+    onTouchCancel: () => { const el = sheetRef.current; drag.current.active = false; if (el) { el.style.transition = ""; el.style.transform = ""; } },
+  };
+
   return (
     <>
       {open && <div className="overlay show" onClick={onClose} />}
-      <div className={`sheet${open ? " show" : ""}`}>
-        <div className="grab" />
+      <div className={`sheet${open ? " show" : ""}`} ref={sheetRef}>
+        <div style={{ padding: "8px 0 2px", touchAction: "none", cursor: "grab" }} aria-label="Свернуть настройки свайпом вниз" {...dragBind}>
+          <div className="grab" />
+        </div>
         <div className="inner">
-          <div className="sheettitle"><span className="t">⚙️ Настройки</span><button className="ghost small" onClick={onClose}>Готово</button></div>
+          <div className="sheettitle" style={{ touchAction: "none" }} {...dragBind}>
+            <span className="t">⚙️ Настройки</span>
+            <button className="ghost small" onClick={(e) => { e.stopPropagation(); onClose(); }}>Готово</button>
+          </div>
 
           {isIos && (
             <div className="bnr" style={{ marginBottom: 14 }}>
