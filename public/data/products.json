@@ -21,7 +21,7 @@
     "brand": "Нет бренда",
     "marketplace": "wb",
     "image": "https://basket-50.wbbasket.ru/vol17042/part1704280/1704280114/images/big/1.webp?picsUpdate=0",
-    "thresholdPct": 3,
+    "thresholdPct": 5,
     "notify": true,
     "addedAt": 1794080011028,
     "lastCheckedAt": 1794243470708,
