@@ -145,7 +145,7 @@ button.small { padding: 8px 12px; font-size: 13px; }
 .bnr b { font-weight: 700; }
 
 /* bottom sheet */
-.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 50; opacity: 0; transition: opacity .22s; }
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,.35); z-index: 50; opacity: 0; transition: opacity .22s; touch-action: none; overscroll-behavior: contain; }
 .overlay.show { opacity: 1; }
 .sheet {
   position: fixed; left: 0; right: 0; bottom: 0; z-index: 51;
@@ -156,6 +156,8 @@ button.small { padding: 8px 12px; font-size: 13px; }
   transform: translateY(100%); transition: transform .28s cubic-bezier(.2,.9,.3,1), visibility 0s .28s;
   visibility: hidden;
   padding-bottom: calc(env(safe-area-inset-bottom) + 16px);
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
 }
 .sheet.show { transform: none; visibility: visible; transition: transform .28s cubic-bezier(.2,.9,.3,1); }
 .sheet .grab { width: 36px; height: 5px; border-radius: 3px; background: var(--sep); margin: 8px auto 10px; }
@@ -182,6 +184,10 @@ button.small { padding: 8px 12px; font-size: 13px; }
   border-top: 0.5px solid var(--sep);
   display: flex; justify-content: space-around;
   padding: 6px 8px calc(env(safe-area-inset-bottom) + 6px);
+  transform: translateZ(0);
+  -webkit-transform: translateZ(0);
+  backface-visibility: hidden;
+  will-change: transform;
 }
 .tabbar button {
   background: transparent; color: var(--text2); border: none; border-radius: 10px;

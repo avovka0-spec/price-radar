@@ -427,6 +427,24 @@ export default function Page() {
   const [manualVal, setManualVal] = useState("");
   useEffect(() => { setArmedDelete(false); setManualVal(""); }, [detail]);
 
+  // Блокировка прокрутки фона при открытой карточке товара (иначе свайп скроллит список под sheet).
+  useEffect(() => {
+    if (!detail) return;
+    const scrollY = window.scrollY;
+    const { overflow, position, top, width } = document.body.style;
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    return () => {
+      document.body.style.overflow = overflow;
+      document.body.style.position = position;
+      document.body.style.top = top;
+      document.body.style.width = width;
+      window.scrollTo(0, scrollY);
+    };
+  }, [detail]);
+
   // Свайп вниз по «ползунку»/шапке для сворачивания bottom-sheet.
   const detailSheetRef = useRef<HTMLDivElement | null>(null);
   const settingsSheetRef = useRef<HTMLDivElement | null>(null);
@@ -687,8 +705,8 @@ export default function Page() {
         {/* ---------- Детальная карточка ---------- */}
         {dProduct && (
           <>
-            <div className="overlay show" onClick={() => setDetail(null)} />
-            <div className="sheet show" ref={detailSheetRef}>
+            <div className="overlay show" onClick={() => setDetail(null)} onTouchMove={(e) => e.preventDefault()} />
+            <div className="sheet show" ref={detailSheetRef} onTouchMove={(e) => e.stopPropagation()}>
               <div style={{ padding: "8px 0 2px", touchAction: "none", cursor: "grab" }} aria-label="Свернуть карточку свайпом вниз" {...bindSheetDrag(detailSheetRef, () => setDetail(null))}>
                 <div className="grab" />
               </div>
@@ -770,10 +788,10 @@ export default function Page() {
       </main>
 
       <nav className="tabbar" aria-label="Навигация">
-        <button className={tab === "cart" ? "active" : ""} onClick={() => setTab("cart")}><span className="ico">🛒</span>Корзина</button>
-        <button className={tab === "search" ? "active" : ""} onClick={() => setTab("search")}><span className="ico">🔍</span>Поиск</button>
-        <button className={tab === "favorites" ? "active" : ""} onClick={() => setTab("favorites")}><span className="ico">♡</span>Отложенные</button>
-        <button className={tab === "settings" ? "active" : ""} onClick={() => setTab("settings")}><span className="ico">⚙️</span>Настройки</button>
+        <button className={tab === "cart" ? "active" : ""} onClick={() => { window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior }); setTab("cart"); }}><span className="ico">🛒</span>Корзина</button>
+        <button className={tab === "search" ? "active" : ""} onClick={() => { window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior }); setTab("search"); }}><span className="ico">🔍</span>Поиск</button>
+        <button className={tab === "favorites" ? "active" : ""} onClick={() => { window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior }); setTab("favorites"); }}><span className="ico">♡</span>Отложенные</button>
+        <button className={tab === "settings" ? "active" : ""} onClick={() => { window.scrollTo({ top: 0, behavior: "instant" as ScrollBehavior }); setTab("settings"); }}><span className="ico">⚙️</span>Настройки</button>
       </nav>
     </>
   );
