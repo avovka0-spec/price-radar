@@ -339,7 +339,7 @@ async function fetchGenericPage(page, p, url, opts = {}) {
   }
 
   if (!price) return null;
-  return { name: name || p.name || String(p.sku), brand: p.brand || "", price, dutyPrice, image: clean(ex.ogImage) || clean(ex.image) || undefined, antibot };
+  return { name: name || p.name || String(p.sku), brand: p.brand || "", price, dutyPrice, image: clean(ex.ogImage) || clean(ex.image) || undefined, antibot, url: clean(ex.url) || undefined };
 }
 
 async function fetchMarketCard(ctx, p){
@@ -493,13 +493,15 @@ async function sendPush(notes, removed, subs, vapidReady) {
         continue;
       }
 
-      if (p.name !== card.name || p.brand !== card.brand || (card.image && p.image !== card.image) || (card.dutyPrice != null && p.dutyPrice !== card.dutyPrice)) {
+      if (p.name !== card.name || p.brand !== card.brand || (card.image && p.image !== card.image) || (card.dutyPrice != null && p.dutyPrice !== card.dutyPrice) || (card.url && card.url !== p.url)) {
         changed = true;
       }
       p.name = card.name || p.name;
       p.brand = card.brand || p.brand;
       if (card.image) p.image = card.image;
       if (card.dutyPrice != null) p.dutyPrice = card.dutyPrice;
+      // Сохраняем финальный URL страницы (редиректы/канонический адрес), чтобы ссылки оставались актуальными.
+      if (card.url && /^https?:\/\//i.test(card.url)) p.url = card.url;
 
       const was = p.currentPrice;
       p.currentPrice = card.price;

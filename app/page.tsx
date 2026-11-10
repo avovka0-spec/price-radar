@@ -722,6 +722,11 @@ export default function Page() {
                   <button className="ghost small" onClick={(e) => { e.stopPropagation(); setDetail(null); }}>Готово</button>
                 </div>
                 {dProduct.currentPrice && <div style={{ fontSize: 32, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{fmt(dProduct.currentPrice)}</div>}
+                <div className="sub" style={{ marginTop: 4, marginBottom: 8 }}>
+                  Обновлено: {dProduct.lastCheckedAt
+                    ? new Date(dProduct.lastCheckedAt).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+                    : "ещё не проверялось"}
+                </div>
                 <Chart history={history} sku={dProduct.sku} />
                 {(() => { const s = stats(dProduct.sku); return (
                   <div className="statgrid">
