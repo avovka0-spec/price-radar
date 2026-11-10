@@ -24,7 +24,8 @@
     "import:ali:prices": "node scripts/ali-import-personal-prices.mjs",
     "add-to-tracking": "node scripts/add-to-tracking.mjs",
     "import:ui": "node scripts/import-ui.mjs",
-    "ui": "node scripts/import-ui.mjs --open"
+    "ui": "node scripts/import-ui.mjs --open",
+    "cleanup": "node scripts/cleanup.mjs"
   },
   "dependencies": {
     "next": "^14.2.35",

@@ -62,3 +62,9 @@ GitHub репозиторий  ──►  GitHub Pages (статический N
 3. Push по Telegram-боту как второй канал.
 4. Сравнение одинаковых товаров (дубли артикулов).
 
+
+## Хранение истории и очистка
+
+- Как хранится история проверок цен, сколько места занимает при 100+ товарах и где лежат данные: [docs/STORAGE_AND_CLEANUP.md](docs/STORAGE_AND_CLEANUP.md)
+- Локальная очистка мусора (логи, кэши браузерного профиля, артефакты сборки): `npm run cleanup` (сухой прогон), `npm run cleanup -- --apply` (удалить).
+- Промежуточные GitHub Issues/задачи/версии: успешные telegram-задачи watcher закрывает автоматически; остальное (старые workflow runs, releases/tags, массовое удаление issues) чистится вручную в GitHub — детали в [docs/STORAGE_AND_CLEANUP.md](docs/STORAGE_AND_CLEANUP.md).
