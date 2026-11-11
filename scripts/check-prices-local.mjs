@@ -125,9 +125,23 @@ async function sendTelegramRelay(notes, chatId) {
   return { ok: false, status: r.status, body: String(r.body||"").slice(0,180) };
 }
 
+function sanitizeProductUrl(raw, marketplace, sku) {
+  const s = String(raw || "").trim();
+  const mUrl = s.match(/https?:\/\/[^\s"'<>]+/i);
+  if (mUrl) return mUrl[0].replace(/[),.;!?]+$/g, "");
+  const sk = String(sku || "");
+  if (/^ali:click:/i.test(sk)) return `https://ali.click/${sk.replace(/^ali:click:/i, "")}`;
+  if (/^ali:short:/i.test(sk)) return `https://a.aliexpress.com/_${sk.replace(/^ali:short:/i, "")}`;
+  if (/^ali:\d+/i.test(sk)) return `https://aliexpress.ru/item/${sk.replace(/^ali:/i, "")}.html`;
+  if (/^ozon:/i.test(sk) && s && !/^https?:/i.test(s)) return `https://www.ozon.ru/product/${sk.replace(/^ozon:(?:t:)?/i, "")}/`;
+  if (/^ym:\d+/i.test(sk)) return `https://market.yandex.ru/product/${sk.replace(/^ym:/i, "")}`;
+  return /^https?:\/\//i.test(s) ? s : "";
+}
+
 function productUrl(p){
-  if (p.url) return p.url;
   const m = (p.marketplace || "wb").toLowerCase();
+  const fromField = sanitizeProductUrl(p.url, m, p.sku);
+  if (fromField) return fromField;
   const id = String(p.sku || "").replace(/^(wb|ozon|ym|ali):/, "");
   if (m === "wb") return `https://www.wildberries.ru/catalog/${id}/detail.aspx`;
   if (m === "ozon") return `https://www.ozon.ru/product/${id}/`;
@@ -205,6 +219,11 @@ async function fetchGenericPage(page, p, url, opts = {}) {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
   } catch (e) {
     log(`goto ${m} ${p.sku}: ${e && e.message ? e.message : e}`);
+  }
+  // Короткие/партнёрские ссылки (ali.click, a.aliexpress.com и т.п.) могут редиректить в браузере.
+  if (m === "ali") {
+    try { await page.waitForLoadState("domcontentloaded", { timeout: 15000 }); } catch {}
+    try { await page.waitForURL(/aliexpress\.(ru|com)\/item/i, { timeout: 12000 }); } catch {}
   }
   await page.waitForTimeout(opts.waitMs ?? 4500);
   const ex = await page.evaluate(() => {
