@@ -29,20 +29,6 @@
     "targetPrice": 300000
   },
   {
-    "id": "a4e11805-86d4-4e2c-804a-2d17ac8d3f79",
-    "sku": "2019475537",
-    "url": "https://www.wildberries.ru/catalog/2019475537/detail.aspx",
-    "name": "Мини-ПК AMD Ryzen 7 8845HS Frost Silver 24G LPDDR5X 1TB, SER",
-    "brand": "",
-    "marketplace": "wb",
-    "image": "https://basket-54.wbbasket.ru/vol20194/part2019475/2019475537/images/big/1.webp?picsUpdate=0",
-    "thresholdPct": 10,
-    "notify": true,
-    "addedAt": 1794153434621,
-    "lastCheckedAt": 1794394675777,
-    "currentPrice": 145627
-  },
-  {
     "id": "85fc8753-d85e-46ac-88b4-870184aac46e",
     "sku": "ali:click:86onq1e",
     "url": "https://aliexpress.ru/item/1005011605901662.html?businessType=ProductDetail&sku_id=12000056041563686&spreadType=socialShare&srcSns=sns_More&utm_medium=sharing",
