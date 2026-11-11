@@ -190,7 +190,7 @@ async function fetchWbPage(page, sku, url){
   return { name, brand, price, image: clean(data.ogImage) || clean(data.image) };
 }
 
-function pickPlausiblePrice(candidates, prevPrice) {
+function pickPlausiblePrice(candidates, prevPrice, marketplace = "") {
   const nums = [...new Set(candidates.map((n) => Math.round(Number(n) || 0)).filter((n) => n > 0))];
   if (!nums.length) return 0;
   if (nums.length === 1) return nums[0];
@@ -205,7 +205,12 @@ function pickPlausiblePrice(candidates, prevPrice) {
   }
   // Без надёжного якоря: убираем экстремально малые выбросы относительно основной группы.
   const hi = sorted[sorted.length - 1];
-  const tail = sorted.filter((n) => n >= Math.max(10, hi * 0.03));
+  let tail = sorted.filter((n) => n >= Math.max(10, hi * 0.03));
+  if (marketplace === "ali" && hi >= 1000) {
+    // На AliExpress частый мусор: рассрочка/часть суммы. Отсекаем слишком малые относительно максимума.
+    const stricter = sorted.filter((n) => n >= hi * 0.35);
+    if (stricter.length) tail = stricter;
+  }
   const pool = tail.length ? tail : sorted.filter((n) => n >= Math.max(2, hi * 0.01));
   const finalPool = pool.length ? pool : sorted;
   // Часто [текущая, старая/зачёркнутая] — текущая обычно среди наименьших в правдоподобной группе.
@@ -224,9 +229,10 @@ async function fetchGenericPage(page, p, url, opts = {}) {
   if (m === "ali") {
     try { await page.waitForLoadState("domcontentloaded", { timeout: 15000 }); } catch {}
     try { await page.waitForURL(/aliexpress\.(ru|com)\/item/i, { timeout: 12000 }); } catch {}
+    try { await page.waitForTimeout(1200); } catch {}
   }
   await page.waitForTimeout(opts.waitMs ?? 4500);
-  const ex = await page.evaluate(() => {
+  const ex = await page.evaluate((marketplace) => {
     const norm = (s) => String(s || "").replace(/\s+/g, " ").trim();
     const body = norm(document.body?.innerText || "").slice(0, 14000);
     const title = document.title || "";
@@ -268,26 +274,34 @@ async function fetchGenericPage(page, p, url, opts = {}) {
         if (st.display === "none" || st.visibility === "hidden" || Number(st.opacity || 1) < 0.05) return null;
         if (r.width < 8 || r.height < 8) return null;
         const dec = `${st.textDecorationLine || ""} ${st.textDecoration || ""}`.toLowerCase();
+        const ctx = norm(((e.closest('[data-spm],section,article,div') || e.parentElement || e).textContent || "").slice(0, 220)).toLowerCase();
+        const badCtx = /в месяц|\/мес|рассроч|\bмес\b|доставк|бонус|кэшбэк|cashback|coupon|купон/.test(ctx);
         return {
           t,
           strike: dec.includes("line-through"),
           fs: parseFloat(st.fontSize || "0") || 0,
           fw: parseInt(st.fontWeight || "400", 10) || 400,
           area: Math.round(r.width * r.height),
+          badCtx,
         };
       })
       .filter(Boolean)
-      .slice(0, 80);
+      .slice(0, 100);
 
     // Фрагменты встроенного JSON в script (Ozon/SPA часто хранят цену там).
     const scriptPrices = [];
-    const scripts = Array.from(document.scripts || []).slice(0, 25);
+    const scripts = Array.from(document.scripts || []).slice(0, 30);
     for (const s of scripts) {
       const txt = String(s.textContent || "");
-      if (txt.length < 40 || txt.length > 250000) continue;
+      if (txt.length < 40 || txt.length > 300000) continue;
       let m;
-      const re = /"(?:price|finalPrice|webPrice|cardPrice|marketingPrice|originalPrice|discountedPrice)"\s*:\s*"?(\d[\d\s\u00a0]{0,12})"?/g;
-      while ((m = re.exec(txt)) && scriptPrices.length < 40) scriptPrices.push(m[1]);
+      const re = /"(?:price|finalPrice|webPrice|cardPrice|marketingPrice|originalPrice|discountedPrice|minActivityAmount|activityAmount|minAmount|totalAmount|discountPrice|salePrice|actSkuBulkPrice)"\s*:\s*"?(\d[\d\s\u00a0.,]{0,14})"?/g;
+      while ((m = re.exec(txt)) && scriptPrices.length < 60) scriptPrices.push(m[1]);
+      if (marketplace === "ali") {
+        // AliExpress часто хранит цену как formattedAmount/amount в runParams/data.
+        const re2 = /"(?:formattedAmount|formatedAmount|amount|value)"\s*:\s*"?([\d\s\u00a0.,]+)\s*₽?"?/g;
+        while ((m = re2.exec(txt)) && scriptPrices.length < 80) scriptPrices.push(m[1]);
+      }
     }
 
     // Таможенный сбор/пошлина (best-effort, напр. AliExpress): ищем в видимом тексте и небольших элементах.
@@ -302,7 +316,7 @@ async function fetchGenericPage(page, p, url, opts = {}) {
       title, ogTitle, h1, ogImage, image: img ? (img.currentSrc || img.src || "") : "",
       metaPrice, ldPrices, priceEls, scriptPrices, customsHits, body, url: location.href,
     };
-  });
+  }, m);
 
   const antibot = /captcha|smartcaptcha|робот|подтвердите|доступ ограничен|verify you are human|blocked|punish/i.test(ex.title + " " + ex.body) || /captcha|punish/i.test(ex.url);
 
@@ -321,19 +335,21 @@ async function fetchGenericPage(page, p, url, opts = {}) {
   let price = pickPlausiblePrice(ldNums, prevRef);
 
   if (!price) {
-    const dom = (ex.priceEls || []).filter((x) => x && !x.strike).map((x) => ({ n: toNum(x.t), ...x })).filter((x) => x.n > 0);
+    const domAll = (ex.priceEls || []).filter((x) => x && !x.strike).map((x) => ({ n: toNum(x.t), ...x })).filter((x) => x.n > 0);
+    const domPreferred = domAll.filter((x) => !x.badCtx);
+    const dom = domPreferred.length ? domPreferred : domAll;
     dom.sort((a, b) => (b.fs - a.fs) || (b.fw - a.fw) || (b.area - a.area));
     // Берём верх заметных элементов (обычно текущая цена крупнее старой/мелочей), затем фильтруем правдоподобность.
-    const top = dom.slice(0, 8).map((x) => x.n);
-    price = pickPlausiblePrice(top, prevRef);
-    if (!price) price = pickPlausiblePrice(dom.map((x) => x.n), prevRef);
+    const top = dom.slice(0, 10).map((x) => x.n);
+    price = pickPlausiblePrice(top, prevRef, m);
+    if (!price) price = pickPlausiblePrice(dom.map((x) => x.n), prevRef, m);
   }
 
-  if (!price) price = pickPlausiblePrice((ex.scriptPrices || []).map(toNum).filter(Boolean), prevRef);
+  if (!price) price = pickPlausiblePrice((ex.scriptPrices || []).map(toNum).filter(Boolean), prevRef, m);
 
   if (!price) {
-    const anyDom = (ex.priceEls || []).map((x) => toNum(x?.t)).filter(Boolean);
-    price = pickPlausiblePrice(anyDom, prevRef);
+    const anyDom = (ex.priceEls || []).filter((x) => !x?.badCtx).map((x) => toNum(x?.t)).filter(Boolean);
+    price = pickPlausiblePrice(anyDom.length ? anyDom : (ex.priceEls || []).map((x) => toNum(x?.t)).filter(Boolean), prevRef, m);
   }
 
   let name = clean(ex.h1) || clean(ex.ogTitle) || clean(ex.title)
