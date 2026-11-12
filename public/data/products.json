@@ -9,8 +9,8 @@
     "thresholdPct": 3,
     "notify": true,
     "addedAt": 1793978460143,
-    "lastCheckedAt": 1794495463337,
-    "currentPrice": 292981,
+    "lastCheckedAt": 1794502663927,
+    "currentPrice": 297624,
     "targetPrice": 280000
   },
   {
@@ -24,7 +24,7 @@
     "thresholdPct": 5,
     "notify": true,
     "addedAt": 1794080011028,
-    "lastCheckedAt": 1794495469738,
+    "lastCheckedAt": 1794502670858,
     "currentPrice": 315791,
     "targetPrice": 300000
   },
@@ -38,10 +38,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794249205171,
-    "lastCheckedAt": 1794495513464,
+    "lastCheckedAt": 1794502714890,
     "image": "https://ae-pic-a1.aliexpress-media.com/kf/S5d4de05456324fd5a5d1ea3a68b658d6a.jpg",
-    "currentPrice": 104613,
-    "dutyPrice": 43906,
+    "currentPrice": 106270,
+    "dutyPrice": 44637,
     "lastNotifiedAt": 1794473912687,
     "lastNotifyPrice": 104613
   },
@@ -55,10 +55,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794249225768,
-    "lastCheckedAt": 1794495547785,
+    "lastCheckedAt": 1794502749739,
     "image": "https://ae-pic-a1.aliexpress-media.com/kf/Sfc4103440f6d4e2da609298687e45cbeV.jpg",
-    "currentPrice": 104613,
-    "dutyPrice": 43906,
+    "currentPrice": 103163,
+    "dutyPrice": 44637,
     "lastNotifiedAt": 1794457344774,
     "lastNotifyPrice": 101605
   },
@@ -72,10 +72,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794249241517,
-    "lastCheckedAt": 1794495582156,
+    "lastCheckedAt": 1794502785291,
     "image": "https://ae-pic-a1.aliexpress-media.com/kf/S603df4787c2340ebb122fc45e20c142aj.jpg",
-    "currentPrice": 224776,
-    "dutyPrice": 48022,
+    "currentPrice": 228338,
+    "dutyPrice": 48819,
     "lastNotifiedAt": 1794473981925,
     "lastNotifyPrice": 224776
   },
@@ -91,6 +91,6 @@
     "addedAt": 1794252181816,
     "image": "https://ir.ozone.ru/s3/multimedia-1-3/c600/12816663051.jpg",
     "currentPrice": 346582,
-    "lastCheckedAt": 1794495591071
+    "lastCheckedAt": 1794502794314
   }
 ]
