@@ -41,15 +41,26 @@ node scripts/opencode-issues-watcher.mjs             # обработать од
 
 ## Планировщик Windows
 
-Создать/обновить (уже настроено на этом ПК как `OpenCodeTelegramIssues`):
+Создать/обновить (задача `OpenCodeTelegramIssues`):
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\register-opencode-issues-task.ps1
+```
+
+Скрипт регистрирует задачу через `wscript.exe` + `scripts/run-hidden.vbs`, чтобы watcher запускался
+в фоне без видимого окна. **Не используйте `conhost --headless`**: на части конфигураций Windows
+это может приводить к миганию/перезагрузке мониторов при каждом запуске по расписанию.
+
+Ручной эквивалент (если нужно настроить параметры):
 
 ```powershell
 $node = (Get-Command node).Source
-# conhost --headless предотвращает мигание консольного окна каждые 5 минут
-$action = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\conhost.exe" -Argument "--headless -- `"$node`" scripts/opencode-issues-watcher.mjs" -WorkingDirectory "D:\Prog_dev\ai\price-radar"
+$vbs = Join-Path (Get-Location) "scripts\run-hidden.vbs"
+$arg = "//nologo `"$vbs`" `"`"$node`" scripts\opencode-issues-watcher.mjs`""
+$action = New-ScheduledTaskAction -Execute "$env:SystemRoot\System32\wscript.exe" -Argument $arg -WorkingDirectory "D:\Prog_dev\ai\price-radar"
 $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date).AddMinutes(2) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration (New-TimeSpan -Days 3650)
-$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew
-Register-ScheduledTask -TaskName "OpenCodeTelegramIssues" -Action $action -Trigger $trigger -Settings $settings -Description "ЦенРадар/OpenCode: приём telegram-task Issues и запуск opencode" -Force
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -MultipleInstances IgnoreNew -Hidden
+Register-ScheduledTask -TaskName "OpenCodeTelegramIssues" -Action $action -Trigger $trigger -Settings $settings -Description "ЦенРадар/OpenCode: приём telegram-task Issues и запуск opencode (скрытый запуск)" -Force
 ```
 
 Проверка:

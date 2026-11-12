@@ -195,8 +195,10 @@ npm run build && npx serve out   # статический превью
   не в репозитории.
 - **Задачи из Telegram** идут через webhook Cloudflare Worker — мгновенно. Локальный watcher
   `OpenCodeTelegramIssues` (каждые 5 мин) автоматически запускает OpenCode по открытым
-  `telegram-task` Issues: [docs/opencode-issues.md](docs/opencode-issues.md). Polling
-  `telegram-to-issues` оставлен как ручной откат; расписание отключено.
+  `telegram-task` Issues: [docs/opencode-issues.md](docs/opencode-issues.md). Для скрытого запуска
+  по расписанию используйте `scripts/register-opencode-issues-task.ps1` (без `conhost --headless`,
+  который на некоторых ПК вызывает мигание/перезагрузку мониторов). Polling `telegram-to-issues`
+  оставлен как ручной откат; расписание отключено.
 - **`public/data/telegram-offset.json`** нужен только для polling. При работе через
   webhook дедупликация идёт по маркеру `telegram-update-id` в теле Issue.
 
