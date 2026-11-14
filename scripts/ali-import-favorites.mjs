@@ -58,7 +58,10 @@ async function extract(page){ return await page.evaluate(()=>{
     if(!name && !priceText) continue;
     let url=(href.split("?")[0]||`https://aliexpress.ru/item/${id}.html`).replace(/^\/\//,"https://");
     if(url.startsWith("/")) url="https://aliexpress.ru"+url;
-    items.push({marketplace:"ali",sku:`ali:${id}`,productId:id,url,name:name.slice(0,320),priceText:priceText||"",image:img?(img.currentSrc||img.src||""):"",rawText:text});
+    let skuId=""; try{ const u=new URL(href, "https://aliexpress.ru"); skuId = u.searchParams.get("sku_id")||u.searchParams.get("skuid")||""; }catch{ const sm=String(href||"").match(/[?&](?:sku_id|skuid)=(\d+)/i); if(sm) skuId=sm[1]; }
+    if(/^\d+$/.test(String(skuId))) url = `https://aliexpress.ru/item/${id}.html?sku_id=${skuId}`;
+    const sku = /^\d+$/.test(String(skuId)) ? `ali:${id}:v:${skuId}` : `ali:${id}`;
+    items.push({marketplace:"ali",sku,productId:id,url,name:name.slice(0,320),priceText:priceText||"",image:img?(img.currentSrc||img.src||""):"",rawText:text});
     seen.add(id);
   }
   const body=norm(document.body?.innerText||"");

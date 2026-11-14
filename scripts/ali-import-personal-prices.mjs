@@ -42,7 +42,12 @@ async function extract(page){ return await page.evaluate(()=>{ const norm=s=>Str
     const page=ctx.pages()[0]||await ctx.newPage();
     for(let i=0;i<targets.length;i++){
       const t=targets[i]; let url=t.url;
-      if(!url && t.sku && /^ali:(\d+)$/.test(String(t.sku))) url=`https://aliexpress.ru/item/${String(t.sku).replace(/^ali:/,"")}.html`;
+      if(!url && t.sku){
+        const sk = String(t.sku);
+        const v = sk.match(/^ali:(\d+):v:(\d+)$/);
+        if (v) url=`https://aliexpress.ru/item/${v[1]}.html?sku_id=${v[2]}`;
+        else if (/^ali:(\d+)$/.test(sk)) url=`https://aliexpress.ru/item/${sk.replace(/^ali:/,"")}.html`;
+      }
       if(!url){ items.push({marketplace:"ali",sku:t.sku,url:null,error:"no url"}); continue; }
       log(`[${i+1}/${targets.length}] ${url}`);
       await page.goto(url,{waitUntil:"domcontentloaded",timeout:60000}).catch(e=>log(`goto: ${e.message}`));

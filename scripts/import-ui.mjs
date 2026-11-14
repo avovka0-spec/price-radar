@@ -31,7 +31,13 @@ function normalizeItem(it, m){
   if(m==="wb"){ const id=String(it.productId||it.sku||"").replace(/^wb:/,""); if(!id) return null; return { sku:id, marketplace:"wb", url: it.url || `https://www.wildberries.ru/catalog/${id}/detail.aspx`, image: it.image || wbImageUrl(id) }; }
   if(m==="ozon"){ const id=String(it.productId||it.sku||"").replace(/^ozon:/,""); if(!id) return null; return { sku:`ozon:${id}`, marketplace:"ozon", url: it.url || `https://www.ozon.ru/product/${id}/`, image: it.image }; }
   if(m==="ym"){ const id=String(it.productId||it.sku||"").replace(/^ym:/,""); if(!id) return null; return { sku:`ym:${id}`, marketplace:"ym", url: it.url || `https://market.yandex.ru/product--${id}/${id}`, image: it.image }; }
-  if(m==="ali"){ const id=String(it.productId||it.sku||"").replace(/^ali:/,""); if(!id) return null; return { sku:`ali:${id}`, marketplace:"ali", url: it.url || `https://aliexpress.ru/item/${id}.html`, image: it.image }; }
+  if(m==="ali"){
+    const rawSku=String(it.productId||it.sku||"");
+    const v=rawSku.match(/^ali:(\d+):v:(\d+)$/) || rawSku.match(/^(\d+):v:(\d+)$/);
+    if(v) return { sku:`ali:${v[1]}:v:${v[2]}`, marketplace:"ali", url: it.url || `https://aliexpress.ru/item/${v[1]}.html?sku_id=${v[2]}`, image: it.image };
+    const id=rawSku.replace(/^ali:/,""); if(!id) return null;
+    return { sku:`ali:${id}`, marketplace:"ali", url: it.url || `https://aliexpress.ru/item/${id}.html`, image: it.image };
+  }
   return null;
 }
 function safeSourcePath(m, source){

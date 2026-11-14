@@ -34,10 +34,32 @@ export type ParsedProduct = { sku: string; url: string; name: string; marketplac
 
 export function parseAliExpressLink(url: string): { sku: string; url: string; name: string; marketplace: "ali" } | null {
   const s = url.trim();
+  const aliVariantParams = (raw: string) => {
+    try {
+      const u = new URL(raw);
+      const picked: string[] = [];
+      for (const key of ["sku_id", "skuid", "skuId"]) {
+        const v = u.searchParams.get(key);
+        if (v && /^\d+$/.test(v)) picked.push(`sku_id=${v}`);
+      }
+      return picked.length ? `?${[...new Set(picked)].join("&")}` : "";
+    } catch {
+      const mSku = raw.match(/[?&](?:sku_id|skuid|skuId)=(\d+)/i);
+      return mSku ? `?sku_id=${mSku[1]}` : "";
+    }
+  };
   // https://www.aliexpress.com/item/1005001234567890.html  /  https://aliexpress.ru/item/...
   const m = s.match(/aliexpress\.(?:com|ru)\/item\/(\d+)/i);
   if (m) {
-    return { sku: `ali:${m[1]}`, url: s.split("?")[0], name: "Товар AliExpress", marketplace: "ali" };
+    const variant = aliVariantParams(s);
+    const skuVar = variant.match(/sku_id=(\d+)/)?.[1];
+    const base = `https://aliexpress.ru/item/${m[1]}.html`;
+    return {
+      sku: skuVar ? `ali:${m[1]}:v:${skuVar}` : `ali:${m[1]}`,
+      url: base + variant,
+      name: "Товар AliExpress",
+      marketplace: "ali",
+    };
   }
   // короткая ссылка a.aliexpress.com/...
   const t = s.match(/a\.aliexpress\.com\/_([A-Za-z0-9]+)/i);

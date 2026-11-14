@@ -17,6 +17,8 @@ function safeExternalUrl(raw: string | undefined, marketplace?: string, sku?: st
   const sk = String(sku || "");
   if (/^ali:click:/i.test(sk)) return `https://ali.click/${sk.replace(/^ali:click:/i, "")}`;
   if (/^ali:short:/i.test(sk)) return `https://a.aliexpress.com/_${sk.replace(/^ali:short:/i, "")}`;
+  const aliVar = sk.match(/^ali:(\d+):v:(\d+)$/i);
+  if (aliVar) return `https://aliexpress.ru/item/${aliVar[1]}.html?sku_id=${aliVar[2]}`;
   if (/^ali:\d+/i.test(sk)) return `https://aliexpress.ru/item/${sk.replace(/^ali:/i, "")}.html`;
   if (/^ozon:/i.test(sk) && s && !/^https?:/i.test(s)) return `https://www.ozon.ru/product/${sk.replace(/^ozon:(?:t:)?/i, "")}/`;
   if (/^ym:\d+/i.test(sk)) return `https://market.yandex.ru/product/${sk.replace(/^ym:/i, "")}`;
