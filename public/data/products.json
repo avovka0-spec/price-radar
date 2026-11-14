@@ -36,7 +36,7 @@
     "brand": "",
     "marketplace": "ali",
     "thresholdPct": 10,
-    "notify": false,
+    "notify": true,
     "addedAt": 1794249205171,
     "lastCheckedAt": 1794675484964,
     "image": "https://ae-pic-a1.aliexpress-media.com/kf/S5d4de05456324fd5a5d1ea3a68b658d6a.jpg",
