@@ -429,6 +429,23 @@ export default function Page() {
   const [manualVal, setManualVal] = useState("");
   useEffect(() => { setArmedDelete(false); setManualVal(""); }, [detail]);
 
+  // --- Поиск/каталог (YoloPrice-like) ---
+  type CatalogItem = { id: string; name: string; marketplace: "wb"|"ozon"|"ym"|"ali"; category: string; priceFrom: number; rating: number; reviews: number; image?: string; url: string };
+  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
+  const [searchQ, setSearchQ] = useState("");
+  const [searchCat, setSearchCat] = useState("Все");
+  const [searchSort, setSearchSort] = useState<"cheap"|"expensive"|"rating"|"reviews">("cheap");
+  const [catalogDetail, setCatalogDetail] = useState<CatalogItem | null>(null);
+  useEffect(() => {
+    const base = process.env.NEXT_PUBLIC_BASE_PATH || "";
+    fetch(`${base}/data/catalog.json`, { cache: "no-store" }).then(r => r.ok ? r.json() : []).then(d => { if (Array.isArray(d)) setCatalog(d); }).catch(() => {});
+  }, []);
+  useEffect(() => {
+    const clear = () => { try { if ((navigator as any).clearAppBadge) (navigator as any).clearAppBadge(); } catch {} };
+    clear();
+    document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") clear(); });
+  }, []);
+
   // Блокировка прокрутки фона при открытой карточке товара (иначе свайп скроллит список под sheet).
   useEffect(() => {
     if (!detail) return;
@@ -603,11 +620,11 @@ export default function Page() {
                   {(() => {
                     const foreign = p.abroad || p.marketplace === "ali";
                     if (!foreign) return null;
-                    if (p.dutyPrice) return <div className="duty-line">+ таможенный сбор {fmt(p.dutyPrice)}</div>;
+                    if (p.dutyPrice) return <div className="duty-line">+ пошлина {fmt(p.dutyPrice)}</div>;
                     if (p.currentPrice) {
                       const d = estimateDutyRub(p.currentPrice, eurRate);
-                      if (d > 0) return <div className="duty-line">≈ +пошлина {fmt(d)} (14,3% сверх 200 €)</div>;
-                      return <div className="duty-line">без пошлины (≤ 200 €) · из-за рубежа</div>;
+                      if (d > 0) return <div className="duty-line">≈ пошлина {fmt(d)}</div>;
+                      return <div className="duty-line">без пошлины · из-за рубежа</div>;
                     }
                     return <div className="duty-line">товар из-за рубежа</div>;
                   })()}
@@ -667,19 +684,56 @@ export default function Page() {
           </>
         )}
 
-        {tab === "search" && (
+        {tab === "search" && (() => {
+          const cats = ["Все", "Для дома", "Электроника", "Бытовая техника", "Одежда и обувь", "Красота", "Спорт", "Детям", "Авто"];
+          const q = searchQ.trim().toLowerCase();
+          let list = catalog.filter(c => (searchCat === "Все" || c.category === searchCat) && (!q || c.name.toLowerCase().includes(q)));
+          list = [...list].sort((a,b) => searchSort === "cheap" ? a.priceFrom - b.priceFrom : searchSort === "expensive" ? b.priceFrom - a.priceFrom : searchSort === "rating" ? b.rating - a.rating : b.reviews - a.reviews);
+          return (
           <>
-            <p className="sub">Добавить товар по ссылке или артикулу</p>
+            <p className="sub">Поиск и добавление товаров</p>
             <div className="addrow">
-              <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="Ссылка WB/Ozon/ЯМ/AliExpress (в т.ч. ali.click) или артикул"
+              <input value={link} onChange={(e) => setLink(e.target.value)} placeholder="Ссылка или артикул для отслеживания"
                 inputMode="url" autoCapitalize="none" autoCorrect="off" onKeyDown={(e) => e.key === "Enter" && addProduct()} />
               <button onClick={() => addProduct()}>＋</button>
             </div>
             {addErr && <div className="err">{addErr}</div>}
-            <div className="sub" style={{ marginTop: 8 }}>Можно вставить текст «Поделиться» целиком — название попробуем извлечь автоматически. После добавления товар появится в «Корзине».</div>
-            {products.length > 0 && <div className="card" style={{ padding: 12, marginTop: 12 }}><div className="pbrand">Отслеживается товаров: <b>{products.length}</b> · отложено: <b>{products.filter(p=>p.favorite).length}</b></div></div>}
+            <div className="field" style={{ marginBottom: 8 }}>
+              <input value={searchQ} onChange={(e) => setSearchQ(e.target.value)} placeholder="Поиск товаров по каталогe" />
+            </div>
+            <div style={{ display: "flex", gap: 6, overflowX: "auto", paddingBottom: 6, marginBottom: 8, WebkitOverflowScrolling: "touch" }}>
+              {cats.map(c => (
+                <button key={c} className={searchCat === c ? "" : "ghost"} style={{ flex: "0 0 auto", padding: "8px 12px", fontSize: 13, borderRadius: 16, background: searchCat === c ? "var(--accent)" : "var(--bg)", color: searchCat === c ? "#fff" : "var(--text)", border: "1px solid var(--sep)", whiteSpace: "nowrap" }} onClick={() => setSearchCat(c)}>{c}</button>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 10 }}>
+              {([["cheap","Дешевле"],["expensive","Дороже"],["rating","Высокий рейтинг"],["reviews","Больше отзывов"]] as const).map(([k,label]) => (
+                <button key={k} className={searchSort === k ? "" : "ghost"} style={{ padding: "6px 10px", fontSize: 12, borderRadius: 14, background: searchSort === k ? "var(--accent)" : "var(--bg)", color: searchSort === k ? "#fff" : "var(--text2)", border: "1px solid var(--sep)" }} onClick={() => setSearchSort(k)}>{label}</button>
+              ))}
+            </div>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              {list.map(item => (
+                <div key={item.id} className="card" style={{ marginBottom: 0, cursor: "pointer" }} onClick={() => setCatalogDetail(item)}>
+                  <div style={{ padding: 10 }}>
+                    <div style={{ height: 72, borderRadius: 10, background: "var(--bg)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 8, fontSize: 24 }}>
+                      {item.marketplace === "wb" ? "🟣" : item.marketplace === "ozon" ? "🔵" : item.marketplace === "ym" ? "🟡" : "🟠"}
+                    </div>
+                    <div className="pname" style={{ WebkitLineClamp: 2, minHeight: 34 }}>{item.name}</div>
+                    <div className="pbrand" style={{ marginTop: 4 }}>
+                      <span className={`mpbadge ${item.marketplace}`}>{item.marketplace === "ym" ? "ЯМ" : item.marketplace.toUpperCase()}</span>
+                      <span>★ {item.rating.toFixed(1)}</span>
+                      <span>{item.reviews}</span>
+                    </div>
+                    <div style={{ marginTop: 6, fontWeight: 700, fontSize: 15 }}>от {fmt(item.priceFrom)}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {list.length === 0 && <div className="empty">Ничего не найдено. Попробуйте изменить категорию или запрос.</div>}
+            <div className="sub" style={{ marginTop: 10 }}>Каталог подборок для быстрого добавления. Для точного отслеживания конкретного товара вставьте его ссылку выше.</div>
           </>
-        )}
+          );
+        })()}
 
         {tab === "favorites" && (
           <>
@@ -786,6 +840,28 @@ export default function Page() {
                   {armedDelete ? "⚠️ Нажмите ещё раз — удалить окончательно" : "Удалить из отслеживания"}
                 </button>
                 {armedDelete && <button className="ghost small" style={{ width: "100%" }} onClick={() => setArmedDelete(false)}>Отмена</button>}
+              </div>
+            </div>
+          </>
+        )}
+
+        {catalogDetail && (
+          <>
+            <div className="overlay show" onClick={() => setCatalogDetail(null)} onTouchMove={(e) => e.preventDefault()} />
+            <div className="sheet show" onTouchMove={(e) => e.stopPropagation()}>
+              <div style={{ padding: "8px 0 2px" }}><div className="grab" /></div>
+              <div className="inner">
+                <div className="sheettitle">
+                  <span className="t">
+                    <span className={`mpbadge ${catalogDetail.marketplace}`} style={{ marginRight: 6, verticalAlign: "middle" }}>{catalogDetail.marketplace === "ym" ? "ЯМ" : catalogDetail.marketplace.toUpperCase()}</span>
+                    {catalogDetail.name}
+                  </span>
+                  <button className="ghost small" onClick={(e) => { e.stopPropagation(); setCatalogDetail(null); }}>Закрыть</button>
+                </div>
+                <div style={{ fontSize: 28, fontWeight: 800, fontVariantNumeric: "tabular-nums", marginBottom: 4 }}>от {fmt(catalogDetail.priceFrom)}</div>
+                <div className="sub" style={{ marginTop: 0, marginBottom: 12 }}>{catalogDetail.category} · ★ {catalogDetail.rating.toFixed(1)} · {catalogDetail.reviews.toLocaleString("ru-RU")} отзывов</div>
+                <button style={{ width: "100%", marginBottom: 8 }} onClick={async () => { const url = catalogDetail.url; setCatalogDetail(null); setTab("search"); await addProduct(url); }}>Добавить для отслеживания</button>
+                <a className="linkrow" href={safeExternalUrl(catalogDetail.url, catalogDetail.marketplace)} target="_blank" rel="noreferrer">Открыть в магазине ↗</a>
               </div>
             </div>
           </>

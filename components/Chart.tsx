@@ -1,8 +1,13 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { History } from "@/lib/types";
 
-const MAXH = 180 * 24 * 3600 * 1000;
+const DAY = 24 * 3600 * 1000;
+const PERIODS: { days: number; label: string }[] = [
+  { days: 30, label: "1 мес." },
+  { days: 90, label: "3 мес." },
+  { days: 180, label: "6 мес." },
+];
 
 export function fmt(n: number) {
   return n.toLocaleString("ru-RU", { maximumFractionDigits: 0 }) + " ₽";
@@ -13,32 +18,52 @@ function short(n: number) {
   return Math.round(n).toLocaleString("ru-RU");
 }
 
-/** SVG-график динамики цены за до 180 дней */
+/** SVG-график динамики цены */
 export default function Chart({ history, sku, height = 220 }: { history?: History; sku: string; height?: number }) {
   const W = 400;
   const H = height;
   const PT = { l: 6, r: 54, t: 16, b: 24 };
+  const [periodDays, setPeriodDays] = useState(180);
+  const [active, setActive] = useState<number | null>(null);
 
   const pts = useMemo(() => {
     const raw = history?.[sku] ?? [];
     const now = Date.now();
     return raw
-      .filter((x) => now - x.t <= MAXH)
+      .filter((x) => now - x.t <= periodDays * DAY)
       .map((x) => ({ t: x.t, p: x.p, m: x.m }))
       .sort((a, b) => a.t - b.t);
-  }, [history, sku]);
+  }, [history, sku, periodDays]);
+
+  useEffect(() => { setActive(null); }, [periodDays, sku]);
 
   const fmtD = (t: number) => new Date(t).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
 
+  const PeriodToggle = (
+    <div className="chart-periods">
+      {PERIODS.map((p) => (
+        <button key={p.days} type="button" className={periodDays === p.days ? "active" : ""} onClick={() => setPeriodDays(p.days)}>{p.label}</button>
+      ))}
+    </div>
+  );
+
   if (pts.length === 0) {
-    return <div className="empty" style={{ padding: "20px 8px" }}>Нет истории цен — появится после первой проверки.</div>;
+    return (
+      <div style={{ margin: "8px 0" }}>
+        <div className="empty" style={{ padding: "20px 8px" }}>Нет данных за выбранный период.</div>
+        {PeriodToggle}
+      </div>
+    );
   }
   if (pts.length === 1) {
     const p = pts[0];
     return (
-      <div className="card" style={{ padding: "14px 12px", margin: "8px 0" }}>
-        <div style={{ fontSize: 22, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fmt(p.p)}</div>
-        <div className="sub" style={{ marginTop: 4 }}>1 точка · {fmtD(p.t)} · график динамики появится после следующих проверок</div>
+      <div style={{ margin: "8px 0" }}>
+        <div className="card" style={{ padding: "14px 12px", margin: "0 0 8px" }}>
+          <div style={{ fontSize: 22, fontWeight: 700, fontVariantNumeric: "tabular-nums" }}>{fmt(p.p)}</div>
+          <div className="sub" style={{ marginTop: 4 }}>1 точка · {fmtD(p.t)} · график появится после следующих проверок</div>
+        </div>
+        {PeriodToggle}
       </div>
     );
   }
@@ -64,7 +89,6 @@ export default function Chart({ history, sku, height = 220 }: { history?: Histor
   const manual = pts.filter((x) => x.m);
   const minPt = pts.find(x => x.p === lo) || last;
   const maxPt = pts.find(x => x.p === hi) || last;
-  const [active, setActive] = useState<number | null>(null);
   const ap = active != null ? pts[active] : null;
 
   return (
@@ -121,6 +145,7 @@ export default function Chart({ history, sku, height = 220 }: { history?: Histor
         <text x={PT.l} y={H - 6} fontSize="10" fill="var(--text2, #93a0c6)">{fmtD(t0)}</text>
         <text x={W - PT.r} y={H - 6} textAnchor="end" fontSize="10" fill="var(--text2, #93a0c6)">{fmtD(last.t)}</text>
       </svg>
+      {PeriodToggle}
     </div>
   );
 }

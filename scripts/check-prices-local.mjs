@@ -513,6 +513,7 @@ async function sendPush(notes, removed, subs, vapidReady) {
     title: "ЦенРадар",
     body: notes.join("\n"),
     url: "./",
+    count: notes.length,
   });
   for (const s of subs) {
     try {

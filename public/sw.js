@@ -11,19 +11,21 @@ self.addEventListener("push", (event) => {
   } catch {}
   if (!data.body) {
     if (event.data) {
-      const txt = event.data.text();
-      if (txt) data.body = txt;
+      try { const txt = event.data.text(); if (txt) data.body = txt; } catch {}
     }
   }
-  event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      data: data.url,
-      icon: "icons/icon-192.png",
-      badge: "icons/badge-96.png",
-    })
-  );
-  if (self.navigator.setAppBadge) self.navigator.setAppBadge(1);
+  const count = typeof data.count === "number" ? data.count : (typeof data.badge === "number" ? data.badge : 1);
+  event.waitUntil((async () => {
+    try {
+      await self.registration.showNotification(data.title, {
+        body: data.body,
+        data: data.url,
+        icon: "icons/icon-192.png",
+        badge: "icons/badge-96.png",
+      });
+    } catch {}
+    try { if (self.navigator.setAppBadge) await self.navigator.setAppBadge(count > 0 ? count : 1); } catch {}
+  })());
 });
 
 self.addEventListener("notificationclick", (event) => {
