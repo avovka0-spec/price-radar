@@ -5,11 +5,11 @@
     "url": "https://www.wildberries.ru/catalog/1545780372/detail.aspx",
     "name": "Мини-ПК GMKtec EVO-X2 Ryzen AI Max+ EU, 128GB 4TB",
     "brand": "GMKtec",
-    "image": "https://mow-basket-cdn-14.geobasket.ru/vol15457/part1545780/1545780372/images/big/1.webp?picsUpdate=0",
+    "image": "https://basket-48.wbbasket.ru/vol15457/part1545780/1545780372/images/big/1.webp?picsUpdate=0",
     "thresholdPct": 3,
     "notify": true,
     "addedAt": 1793978460143,
-    "lastCheckedAt": 1794681556364,
+    "lastCheckedAt": 1794682370746,
     "currentPrice": 295984,
     "targetPrice": 280000
   },
@@ -20,11 +20,11 @@
     "name": "SZBOX Ryzen AI MAX 395 Мини-ПК Gaming 128 ГБ LPDDR5X 128GB",
     "brand": "Нет бренда",
     "marketplace": "wb",
-    "image": "https://mow-basket-cdn-36.geobasket.ru/vol17042/part1704280/1704280114/images/big/1.webp?picsUpdate=0",
+    "image": "https://basket-50.wbbasket.ru/vol17042/part1704280/1704280114/images/big/1.webp?picsUpdate=0",
     "thresholdPct": 5,
     "notify": true,
     "addedAt": 1794080011028,
-    "lastCheckedAt": 1794681563070,
+    "lastCheckedAt": 1794682377233,
     "currentPrice": 319027,
     "targetPrice": 300000
   },
@@ -38,12 +38,12 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794249205171,
-    "lastCheckedAt": 1794681577513,
+    "lastCheckedAt": 1794682391656,
     "image": "https://ae-pic-a1.aliexpress-media.com/kf/S5d4de05456324fd5a5d1ea3a68b658d6a.jpg",
-    "currentPrice": 227080,
+    "currentPrice": 295158,
     "dutyPrice": 44431,
-    "lastNotifiedAt": 1794681577574,
-    "lastNotifyPrice": 227080
+    "lastNotifiedAt": 1794682391696,
+    "lastNotifyPrice": 295158
   },
   {
     "id": "d566634e-b8f0-4a40-a117-50a2a4986136",
@@ -55,12 +55,12 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794249225768,
-    "lastCheckedAt": 1794681593314,
+    "lastCheckedAt": 1794682406099,
     "image": "https://ae-pic-a1.aliexpress-media.com/kf/Sfc4103440f6d4e2da609298687e45cbeV.jpg",
-    "currentPrice": 227080,
+    "currentPrice": 288928,
     "dutyPrice": 44431,
-    "lastNotifiedAt": 1794681593314,
-    "lastNotifyPrice": 227080
+    "lastNotifiedAt": 1794682406099,
+    "lastNotifyPrice": 288928
   },
   {
     "id": "f0790d57-656e-44bd-b89d-7ae8fb57a6b8",
@@ -72,12 +72,12 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794249241517,
-    "lastCheckedAt": 1794681608596,
+    "lastCheckedAt": 1794682421500,
     "image": "https://ae-pic-a1.aliexpress-media.com/kf/S603df4787c2340ebb122fc45e20c142aj.jpg",
-    "currentPrice": 105685,
+    "currentPrice": 318843,
     "dutyPrice": 48590,
-    "lastNotifiedAt": 1794548010242,
-    "lastNotifyPrice": 106270
+    "lastNotifiedAt": 1794682421501,
+    "lastNotifyPrice": 318843
   },
   {
     "id": "76fed17e-d3ee-409d-801d-ef6529b0d6f2",
@@ -91,6 +91,6 @@
     "addedAt": 1794252181816,
     "image": "https://ir.ozone.ru/s3/multimedia-1-3/c600/12816663051.jpg",
     "currentPrice": 336434,
-    "lastCheckedAt": 1794681617579
+    "lastCheckedAt": 1794682430538
   }
 ]
