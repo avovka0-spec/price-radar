@@ -404,7 +404,19 @@ async function fetchGenericPage(page, p, url, opts = {}) {
     dom.sort((a, b) => (b.fs - a.fs) || (b.fw - a.fw) || (b.area - a.area));
     // Берём верх заметных элементов (обычно текущая цена крупнее старой/мелочей), затем фильтруем правдоподобность.
     const top = dom.slice(0, 10).map((x) => x.n);
-    price = pickPlausiblePrice(top, prevRef, m);
+    // Для выбранной комплектации (sku_id) или когда есть один явно выделенный основной ценник,
+    // предпочитаем самый заметный незачёркнутый элемент (часто это актуальная цена варианта/с купоном),
+    // а не минимальную среди всех цен опций на странице.
+    if (m === "ali" && dom.length) {
+      const main = dom[0];
+      const second = dom[1];
+      const mainDominant = main && ((main.area >= 6000 && main.fs >= 18) || (main.fs >= 24 && main.fw >= 500) || (targetSkuId && main.fs >= 18 && main.fw >= 500));
+      const clearlyAbove = !second || main.area >= second.area * 1.6 || main.fs > second.fs || (main.fw >= 600 && second.fw < 600);
+      if (mainDominant && clearlyAbove) {
+        price = main.n;
+      }
+    }
+    if (!price) price = pickPlausiblePrice(top, prevRef, m);
     if (!price) price = pickPlausiblePrice(dom.map((x) => x.n), prevRef, m);
   }
 
