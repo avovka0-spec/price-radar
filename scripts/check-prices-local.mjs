@@ -225,6 +225,7 @@ function pickPlausiblePrice(candidates, prevPrice, marketplace = "") {
 async function fetchGenericPage(page, p, url, opts = {}) {
   const m = (p.marketplace || "").toLowerCase();
   const prevRef = Number(p._priceRef || p.currentPrice || 0);
+  const targetSkuId = String((p.sku || "").match(/^ali:\d+:v:(\d+)$/i)?.[1] || (url || p.url || "").match(/[?&](?:sku_id|skuId|skuid)=(\d+)/i)?.[1] || "");
   try {
     await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
   } catch (e) {
@@ -234,10 +235,16 @@ async function fetchGenericPage(page, p, url, opts = {}) {
   if (m === "ali") {
     try { await page.waitForLoadState("domcontentloaded", { timeout: 15000 }); } catch {}
     try { await page.waitForURL(/aliexpress\.(ru|com)\/item/i, { timeout: 12000 }); } catch {}
-    try { await page.waitForTimeout(1200); } catch {}
+    // Если знаем sku_id комплектации — дожидаемся, чтобы цена варианта успела примениться.
+    if (targetSkuId) {
+      try { await page.waitForFunction((sid) => location.href.includes("sku_id=" + sid) || !!document.querySelector('[class*="price"],[class*="Price"],[data-sku-id]'), { timeout: 8000 }, targetSkuId); } catch {}
+      try { await page.waitForTimeout(1800); } catch {}
+    } else {
+      try { await page.waitForTimeout(1200); } catch {}
+    }
   }
   await page.waitForTimeout(opts.waitMs ?? 4500);
-  const ex = await page.evaluate((marketplace) => {
+  const ex = await page.evaluate(({ marketplace, targetSkuId }) => {
     const norm = (s) => String(s || "").replace(/\s+/g, " ").trim();
     const body = norm(document.body?.innerText || "").slice(0, 14000);
     const title = document.title || "";
@@ -295,10 +302,39 @@ async function fetchGenericPage(page, p, url, opts = {}) {
 
     // Фрагменты встроенного JSON в script (Ozon/SPA часто хранят цену там).
     const scriptPrices = [];
+    const variantPrices = [];
     const scripts = Array.from(document.scripts || []).slice(0, 30);
+    const collectVariantFromObj = (root, sid) => {
+      if (!sid || !root || typeof root !== "object") return;
+      const seen = new Set();
+      const stack = [root];
+      let steps = 0;
+      while (stack.length && steps++ < 12000) {
+        const v = stack.pop();
+        if (!v || typeof v !== "object") continue;
+        if (seen.has(v)) continue;
+        seen.add(v);
+        if (Array.isArray(v)) { for (let i = 0; i < v.length; i++) stack.push(v[i]); continue; }
+        const vid = v.skuId != null ? String(v.skuId) : (v.skuIdStr != null ? String(v.skuIdStr) : (v.sku_id != null ? String(v.sku_id) : ""));
+        if (vid && String(vid) === String(sid)) {
+          const cands = [
+            v.skuVal && v.skuVal.skuAmount && v.skuVal.skuAmount.value,
+            v.skuVal && v.skuVal.skuActivityAmount && v.skuVal.skuActivityAmount.value,
+            v.skuPrice && v.skuPrice.skuAmount && v.skuPrice.skuAmount.value,
+            v.skuPrice && v.skuPrice.discountPrice,
+            v.skuPrice && v.skuPrice.salePrice,
+            v.skuActivityAmount && v.skuActivityAmount.value,
+            v.skuAmount && v.skuAmount.value,
+            v.discountPrice, v.salePrice, v.activityAmount, v.price, v.amount,
+          ];
+          for (const c of cands) if (c != null) variantPrices.push(String(c));
+        }
+        for (const k of Object.keys(v)) stack.push(v[k]);
+      }
+    };
     for (const s of scripts) {
       const txt = String(s.textContent || "");
-      if (txt.length < 40 || txt.length > 300000) continue;
+      if (txt.length < 40 || txt.length > 350000) continue;
       let m;
       const re = /"(?:price|finalPrice|webPrice|cardPrice|marketingPrice|originalPrice|discountedPrice|minActivityAmount|activityAmount|minAmount|totalAmount|discountPrice|salePrice|actSkuBulkPrice)"\s*:\s*"?(\d[\d\s\u00a0.,]{0,14})"?/g;
       while ((m = re.exec(txt)) && scriptPrices.length < 60) scriptPrices.push(m[1]);
@@ -306,7 +342,19 @@ async function fetchGenericPage(page, p, url, opts = {}) {
         // AliExpress часто хранит цену как formattedAmount/amount в runParams/data.
         const re2 = /"(?:formattedAmount|formatedAmount|amount|value)"\s*:\s*"?([\d\s\u00a0.,]+)\s*₽?"?/g;
         while ((m = re2.exec(txt)) && scriptPrices.length < 80) scriptPrices.push(m[1]);
+        if (targetSkuId) {
+          try {
+            const dm = txt.match(/data\s*:\s*(\{[\s\S]*\})\s*[,;]?\s*(?:csrfToken|$)/);
+            if (dm) collectVariantFromObj(JSON.parse(dm[1]), targetSkuId);
+          } catch {}
+          try { if (window.runParams) collectVariantFromObj(window.runParams, targetSkuId); } catch {}
+          try { if (window.__INIT_DATA__) collectVariantFromObj(window.__INIT_DATA__, targetSkuId); } catch {}
+        }
       }
+    }
+    if (marketplace === "ali" && targetSkuId) {
+      try { if (window.runParams) collectVariantFromObj(window.runParams, targetSkuId); } catch {}
+      try { if (window.__AER_DATA__) collectVariantFromObj(window.__AER_DATA__, targetSkuId); } catch {}
     }
 
     // Таможенный сбор/пошлина (best-effort, напр. AliExpress): ищем в видимом тексте и небольших элементах.
@@ -319,9 +367,9 @@ async function fetchGenericPage(page, p, url, opts = {}) {
 
     return {
       title, ogTitle, h1, ogImage, image: img ? (img.currentSrc || img.src || "") : "",
-      metaPrice, ldPrices, priceEls, scriptPrices, customsHits, body, url: location.href,
+      metaPrice, ldPrices, priceEls, scriptPrices, variantPrices, customsHits, body, url: location.href,
     };
-  }, m);
+  }, { marketplace: m, targetSkuId });
 
   const antibot = /captcha|smartcaptcha|робот|подтвердите|доступ ограничен|verify you are human|blocked|punish/i.test(ex.title + " " + ex.body) || /captcha|punish/i.test(ex.url);
 
@@ -335,9 +383,19 @@ async function fetchGenericPage(page, p, url, opts = {}) {
     return Number.isFinite(n) && n > 0 ? n : 0;
   };
 
-  // Приоритет: JSON-LD/meta -> незачёркнутые заметные DOM-цены -> встроенный JSON -> любые DOM.
+  // Приоритет: цена выбранной комплектации (sku_id) -> JSON-LD/meta -> DOM -> встроенный JSON.
+  let price = 0;
+  if (targetSkuId && Array.isArray(ex.variantPrices) && ex.variantPrices.length) {
+    const vNums = ex.variantPrices.map(toNum).filter((n) => n > 0);
+    if (vNums.length) {
+      // Для конкретного SKU берём актуальную цену варианта: минимальная из правдоподобных значений этого SKU.
+      const uniq = [...new Set(vNums)].sort((a, b) => a - b);
+      price = pickPlausiblePrice(uniq, prevRef, m) || uniq[0] || 0;
+      if (price) log(`variant price ${p.sku}: sku_id=${targetSkuId} -> ${price} (candidates=${uniq.slice(0, 6).join(",")})`);
+    }
+  }
   const ldNums = [...(ex.ldPrices || []), ex.metaPrice].map(toNum).filter(Boolean);
-  let price = pickPlausiblePrice(ldNums, prevRef);
+  if (!price) price = pickPlausiblePrice(ldNums, prevRef, m);
 
   if (!price) {
     const domAll = (ex.priceEls || []).filter((x) => x && !x.strike).map((x) => ({ n: toNum(x.t), ...x })).filter((x) => x.n > 0);
