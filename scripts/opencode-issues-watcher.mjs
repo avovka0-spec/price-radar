@@ -417,7 +417,6 @@ async function main() {
       const ok = result.code === 0 && !result.killedByTimeout;
 
       const report = buildReport(logFile, result);
-      const tgSummary = tailText(report.body, 2200).replace(/```/g, "'''");
       if (ok) {
         state.issues[key] = { status: "done", at: nowIso(), attempt, title: issue.title || "" };
         writeState(state);
@@ -431,7 +430,7 @@ async function main() {
         }
         try { await closeIssue(token, owner, repo, key); } catch (e) { log(String(e && e.message || e)); }
         await notify(token, owner, repo, chatId,
-          `✅ OpenCode выполнил Issue #${key}\n${issue.title || ""}\n${issue.html_url || ""}\n\nОтчёт (хвост):\n${tgSummary.slice(0, 2800)}`);
+          `✅ Готово: Issue #${key} — ${issue.title || ""}\n${issue.html_url || ""}`);
         log(`done #${key}`);
       } else {
         state.issues[key] = {
@@ -448,7 +447,7 @@ async function main() {
             `<details><summary>Отчёт OpenCode (ошибка)${label}</summary>\n\n\`\`\`text\n${part.replace(/```/g, "'''")}\n\`\`\`\n</details>`);
         }
         await notify(token, owner, repo, chatId,
-          `❌ OpenCode ошибка по Issue #${key} (попытка ${attempt})\n${issue.title || ""}\n${report.exitLine}\n${issue.html_url || ""}\n\nОтчёт (хвост):\n${tgSummary.slice(0, 2800)}`);
+          `❌ Ошибка: Issue #${key} — ${issue.title || ""}\n${report.exitLine}\n${issue.html_url || ""}`);
         log(`failed #${key}: ${report.exitLine}`);
       }
       // По одному Issue за запуск — чтобы не держать Task Scheduler долго и не путать логи.
