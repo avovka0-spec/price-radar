@@ -287,7 +287,7 @@ async function fetchGenericPage(page, p, url, opts = {}) {
         if (r.width < 8 || r.height < 8) return null;
         const dec = `${st.textDecorationLine || ""} ${st.textDecoration || ""}`.toLowerCase();
         const ctx = norm(((e.closest('[data-spm],section,article,div') || e.parentElement || e).textContent || "").slice(0, 220)).toLowerCase();
-        const badCtx = /в месяц|\/мес|рассроч|\bмес\b|доставк|бонус|кэшбэк|cashback|coupon|купон/.test(ctx);
+        const badCtx = /в месяц|\/мес|рассроч|\bмес\b|доставк|бонус|кэшбэк|cashback|coupon|купон|ozon карт|с картой ozon|по ozon карт/.test(ctx);
         return {
           t,
           strike: dec.includes("line-through"),
@@ -302,6 +302,7 @@ async function fetchGenericPage(page, p, url, opts = {}) {
 
     // Фрагменты встроенного JSON в script (Ozon/SPA часто хранят цену там).
     const scriptPrices = [];
+    const scriptPreferredPrices = [];
     const variantPrices = [];
     const scripts = Array.from(document.scripts || []).slice(0, 30);
     const collectVariantFromObj = (root, sid) => {
@@ -338,6 +339,12 @@ async function fetchGenericPage(page, p, url, opts = {}) {
       let m;
       const re = /"(?:price|finalPrice|webPrice|cardPrice|marketingPrice|originalPrice|discountedPrice|minActivityAmount|activityAmount|minAmount|totalAmount|discountPrice|salePrice|actSkuBulkPrice)"\s*:\s*"?(\d[\d\s\u00a0.,]{0,14})"?/g;
       while ((m = re.exec(txt)) && scriptPrices.length < 60) scriptPrices.push(m[1]);
+      if (marketplace === "ozon") {
+        // Для Ozon предпочитаем "обычную" цену (web/final/discount), а не цену по Ozon Карте.
+        const rePref = /"(?:price|finalPrice|webPrice|discountedPrice|minAmount|discountPrice|salePrice)"\s*:\s*"?(\d[\d\s\u00a0.,]{0,14})"?/g;
+        let mp;
+        while ((mp = rePref.exec(txt)) && scriptPreferredPrices.length < 40) scriptPreferredPrices.push(mp[1]);
+      }
       if (marketplace === "ali") {
         // AliExpress часто хранит цену как formattedAmount/amount в runParams/data.
         const re2 = /"(?:formattedAmount|formatedAmount|amount|value)"\s*:\s*"?([\d\s\u00a0.,]+)\s*₽?"?/g;
@@ -367,7 +374,7 @@ async function fetchGenericPage(page, p, url, opts = {}) {
 
     return {
       title, ogTitle, h1, ogImage, image: img ? (img.currentSrc || img.src || "") : "",
-      metaPrice, ldPrices, priceEls, scriptPrices, variantPrices, customsHits, body, url: location.href,
+      metaPrice, ldPrices, priceEls, scriptPrices, scriptPreferredPrices, variantPrices, customsHits, body, url: location.href,
     };
   }, { marketplace: m, targetSkuId });
 
@@ -420,7 +427,13 @@ async function fetchGenericPage(page, p, url, opts = {}) {
     if (!price) price = pickPlausiblePrice(dom.map((x) => x.n), prevRef, m);
   }
 
+  if (!price && m === "ozon") price = pickPlausiblePrice((ex.scriptPreferredPrices || []).map(toNum).filter(Boolean), prevRef, m);
   if (!price) price = pickPlausiblePrice((ex.scriptPrices || []).map(toNum).filter(Boolean), prevRef, m);
+  if (!price && m === "ozon" && Array.isArray(ex.scriptPreferredPrices) && ex.scriptPreferredPrices.length) {
+    // Финальный fallback для Ozon: берём наибольшую из "обычных" цен (часто ближе к цене без Ozon Карты), если она правдоподобна.
+    const pref = [...new Set(ex.scriptPreferredPrices.map(toNum).filter((n) => n > 0))].sort((a, b) => a - b);
+    if (pref.length) price = pickPlausiblePrice([pref[pref.length - 1], ...pref], prevRef, m) || pref[pref.length - 1];
+  }
 
   if (!price) {
     const anyDom = (ex.priceEls || []).filter((x) => !x?.badCtx).map((x) => toNum(x?.t)).filter(Boolean);
@@ -633,6 +646,7 @@ async function sendPush(notes, removed, subs, vapidReady) {
       const prevAuto = lastAuto ? lastAuto.p : was;
       const drop = prevAuto ? ((card.price - prevAuto) / prevAuto) * 100 : 0;
       const thr = typeof p.thresholdPct === "number" ? p.thresholdPct : 10;
+      const mpName = { wb: "WB", ozon: "Ozon", ym: "Я.Маркет", ali: "AliExpress" }[m] || m.toUpperCase();
       if (
         notifyOn &&
         prevAuto &&
@@ -641,7 +655,7 @@ async function sendPush(notes, removed, subs, vapidReady) {
         p.lastNotifyPrice !== card.price
       ) {
         notes.push(
-          `${drop < 0 ? "▼" : "▲"} «${p.brand}» ${card.name}: ${card.price.toLocaleString("ru-RU")} ₽ (${drop > 0 ? "+" : ""}${drop.toFixed(1)}%)`,
+          `${drop < 0 ? "▼" : "▲"} [${mpName}] «${p.brand || "—"}» ${card.name}: ${card.price.toLocaleString("ru-RU")} ₽ (${drop > 0 ? "+" : ""}${drop.toFixed(1)}%)`,
         );
         p.lastNotifyPrice = card.price;
         changed = true;
@@ -653,7 +667,7 @@ async function sendPush(notes, removed, subs, vapidReady) {
         p.lastNotifyPrice !== `t:${card.price}`
       ) {
         notes.push(
-          `🎯 «${p.brand}» ${card.name}: ${card.price.toLocaleString("ru-RU")} ₽ — ниже целевой ${p.targetPrice.toLocaleString("ru-RU")} ₽`,
+          `🎯 [${mpName}] «${p.brand || "—"}» ${card.name}: ${card.price.toLocaleString("ru-RU")} ₽ — ниже целевой ${p.targetPrice.toLocaleString("ru-RU")} ₽`,
         );
         p.lastNotifyPrice = `t:${card.price}`;
         changed = true;
