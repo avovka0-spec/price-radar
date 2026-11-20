@@ -8,6 +8,8 @@ export interface Product {
   image?: string;
   /** Публичная/трекинговая цена (₽). В public/data хранить только её/нечувствительные данные. */
   currentPrice?: number;
+  /** Товар недоступен/закончился на площадке (актуально при последней проверке). */
+  outOfStock?: boolean;
   /** Персональная цена из ЛК. НЕ записывать в public/data/products.json; только локальные/приватные потоки. */
   personalPrice?: number;
   personalPriceCapturedAt?: number;

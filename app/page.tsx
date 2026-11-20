@@ -603,7 +603,9 @@ export default function Page() {
                   <div className="pname">{p.name}{p.favorite ? <span className="fav-star">★</span> : null}</div>
                   <div className="pbrand">{p.brand}{s?.days ? ` · ${s.days} дн. наблюдений` : ""}</div>
                   <div className="prow">
-                    {p.currentPrice ? (
+                    {p.outOfStock ? (
+                      <span className="pprice" style={{ color: "var(--text2)" }}>Товар закончился</span>
+                    ) : p.currentPrice ? (
                       <>
                         {autos.length > 1 && prev != null && prev !== p.currentPrice && (
                           <span className="pprice-old">{fmt(prev)}</span>
@@ -613,11 +615,12 @@ export default function Page() {
                     ) : (
                       <span className="pprice" style={{ color: "var(--text2)" }}>— ₽</span>
                     )}
-                    {delta !== null && Math.abs(delta) >= 0.5 && (
+                    {!p.outOfStock && delta !== null && Math.abs(delta) >= 0.5 && (
                       <span className={`pdelta ${delta < 0 ? "down" : "up"}`}>{delta < 0 ? "▼" : "▲"} {Math.abs(delta).toFixed(1)}%</span>
                     )}
                   </div>
                   {(() => {
+                    if (p.outOfStock) return null;
                     const foreign = p.abroad || p.marketplace === "ali";
                     if (!foreign) return null;
                     if (p.dutyPrice) return <div className="duty-line">+ пошлина {fmt(p.dutyPrice)}</div>;
@@ -777,7 +780,11 @@ export default function Page() {
                   </span>
                   <button className="ghost small" onClick={(e) => { e.stopPropagation(); setDetail(null); }}>Готово</button>
                 </div>
-                {dProduct.currentPrice && <div style={{ fontSize: 32, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{fmt(dProduct.currentPrice)}</div>}
+                {dProduct.outOfStock ? (
+                  <div style={{ fontSize: 24, fontWeight: 700, color: "var(--text2)" }}>Товар закончился</div>
+                ) : dProduct.currentPrice ? (
+                  <div style={{ fontSize: 32, fontWeight: 800, fontVariantNumeric: "tabular-nums" }}>{fmt(dProduct.currentPrice)}</div>
+                ) : null}
                 <div className="sub" style={{ marginTop: 4, marginBottom: 8 }}>
                   Обновлено: {dProduct.lastCheckedAt
                     ? new Date(dProduct.lastCheckedAt).toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
@@ -816,7 +823,7 @@ export default function Page() {
                     {dProduct.abroad ? "🌍 Товар из-за рубежа: да (оценка пошлины)" : "🌍 Товар из-за рубежа: нет"}
                   </button>
                 )}
-                {(dProduct.abroad || dProduct.marketplace === "ali") && (
+                {(dProduct.abroad || dProduct.marketplace === "ali") && !dProduct.outOfStock && (
                   <div className="field" style={{ marginBottom: 8 }}>
                     <label>Таможенный сбор, ₽ (если взимается; Ali — из карточки)</label>
                     <input type="number" inputMode="decimal" value={dProduct.dutyPrice ?? ""} placeholder="авто / не задано"
