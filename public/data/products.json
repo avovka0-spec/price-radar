@@ -9,11 +9,11 @@
     "thresholdPct": 3,
     "notify": true,
     "addedAt": 1793978460143,
-    "lastCheckedAt": 1795453063840,
-    "currentPrice": 295564,
+    "lastCheckedAt": 1795499240376,
+    "currentPrice": 440088,
     "targetPrice": 280000,
-    "lastNotifiedAt": 1795410555930,
-    "lastNotifyPrice": 296419
+    "lastNotifiedAt": 1795499240456,
+    "lastNotifyPrice": 440088
   },
   {
     "id": "e64b2f25-f835-4da6-af73-01860f4cce44",
@@ -26,7 +26,7 @@
     "thresholdPct": 5,
     "notify": true,
     "addedAt": 1794080011028,
-    "lastCheckedAt": 1795453071011,
+    "lastCheckedAt": 1795499247119,
     "currentPrice": 316638,
     "targetPrice": 300000
   },
@@ -40,10 +40,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794249205171,
-    "lastCheckedAt": 1795453112515,
+    "lastCheckedAt": 1795499270143,
     "image": "https://ae-pic-a1.aliexpress-media.com/kf/S5d4de05456324fd5a5d1ea3a68b658d6a.jpg",
     "currentPrice": 292949,
-    "dutyPrice": 44104,
+    "dutyPrice": 44106,
     "lastNotifiedAt": 1794682391696,
     "lastNotifyPrice": 295158
   },
@@ -57,10 +57,10 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794249225768,
-    "lastCheckedAt": 1795453149394,
+    "lastCheckedAt": 1795499290572,
     "image": "https://ae-pic-a1.aliexpress-media.com/kf/Sfc4103440f6d4e2da609298687e45cbeV.jpg",
     "currentPrice": 286766,
-    "dutyPrice": 44104,
+    "dutyPrice": 44106,
     "lastNotifiedAt": 1794682406099,
     "lastNotifyPrice": 288928
   },
@@ -74,12 +74,12 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794249241517,
-    "lastCheckedAt": 1795453186569,
+    "lastCheckedAt": 1795499315412,
     "image": "https://ae-pic-a1.aliexpress-media.com/kf/S603df4787c2340ebb122fc45e20c142aj.jpg",
-    "currentPrice": 476929,
-    "dutyPrice": 73569,
-    "lastNotifiedAt": 1795445995772,
-    "lastNotifyPrice": 476929
+    "currentPrice": 318426,
+    "dutyPrice": 48545,
+    "lastNotifiedAt": 1795499315412,
+    "lastNotifyPrice": 318426
   },
   {
     "id": "76fed17e-d3ee-409d-801d-ef6529b0d6f2",
@@ -93,7 +93,7 @@
     "addedAt": 1794252181816,
     "image": "https://ir.ozone.ru/s3/cms/logo/og_ozon_ru.png",
     "currentPrice": 243601,
-    "lastCheckedAt": 1795453195868,
+    "lastCheckedAt": 1795499324570,
     "lastNotifiedAt": 1795149120908,
     "lastNotifyPrice": 243601,
     "outOfStock": true
