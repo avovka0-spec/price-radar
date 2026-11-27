@@ -9,11 +9,11 @@
     "thresholdPct": 3,
     "notify": true,
     "addedAt": 1793978460143,
-    "lastCheckedAt": 1795784263872,
-    "currentPrice": 298280,
+    "lastCheckedAt": 1795791464026,
+    "currentPrice": 444130,
     "targetPrice": 280000,
-    "lastNotifiedAt": 1795755516379,
-    "lastNotifyPrice": 297936
+    "lastNotifiedAt": 1795791464110,
+    "lastNotifyPrice": 444130
   },
   {
     "id": "e64b2f25-f835-4da6-af73-01860f4cce44",
@@ -26,7 +26,7 @@
     "thresholdPct": 5,
     "notify": true,
     "addedAt": 1794080011028,
-    "lastCheckedAt": 1795784270693,
+    "lastCheckedAt": 1795791471379,
     "currentPrice": 318682,
     "targetPrice": 300000
   },
@@ -40,7 +40,7 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794249205171,
-    "lastCheckedAt": 1795784326547,
+    "lastCheckedAt": 1795791507933,
     "image": "https://ae-pic-a1.aliexpress-media.com/kf/S5d4de05456324fd5a5d1ea3a68b658d6a.jpg",
     "currentPrice": 295640,
     "dutyPrice": 44546,
@@ -57,7 +57,7 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794249225768,
-    "lastCheckedAt": 1795784383158,
+    "lastCheckedAt": 1795791544095,
     "image": "https://ae-pic-a1.aliexpress-media.com/kf/Sfc4103440f6d4e2da609298687e45cbeV.jpg",
     "currentPrice": 289400,
     "dutyPrice": 44546,
@@ -74,11 +74,11 @@
     "thresholdPct": 10,
     "notify": true,
     "addedAt": 1794249241517,
-    "lastCheckedAt": 1795784418644,
+    "lastCheckedAt": 1795791601836,
     "image": "https://ae-pic-a1.aliexpress-media.com/kf/S603df4787c2340ebb122fc45e20c142aj.jpg",
-    "currentPrice": 324767,
-    "dutyPrice": 49025,
-    "lastNotifiedAt": 1795755574860,
-    "lastNotifyPrice": 320980
+    "currentPrice": 484726,
+    "dutyPrice": 74282,
+    "lastNotifiedAt": 1795791601837,
+    "lastNotifyPrice": 484726
   }
 ]
